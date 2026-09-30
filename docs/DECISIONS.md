@@ -202,3 +202,5 @@ A non-idempotent call is retried only when it carries an idempotency key.
 **D40. Local ports.** SwiftBets binds only to 127.0.0.1, in the 7100-7199 range: gateway 7100, dashboard 7110, Grafana 7130, SQL Server 7133, Postgres 7134, Redis 7135, Redpanda Console 7180, Prometheus 7190, Kafka 7192. Services have no published ports; the gateway is the only API origin.
 
 **D41. Messaging and outbox packages depend on hosting abstractions only.** An earlier draft took a framework reference on ASP.NET Core, which forced the non-web migrators onto the ASP.NET runtime. Only the Observability and Web packages reference ASP.NET Core.
+
+**D42. CI token scopes.** `dotnet.yml` (build, test, scan, images) needs at most `packages: write` and `security-events: write`. Releasing lives in a separate `dotnet-release.yml` whose one job holds `contents: write`, and only the two package repos call it, on `v*` tags. Reusable workflows are referenced `@main` because they live in the same owner's repository and change together with the platform. Pinning them to a commit SHA is the hardening step once the workflows stabilise (Phase 5).
