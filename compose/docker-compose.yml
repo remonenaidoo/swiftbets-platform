@@ -371,7 +371,8 @@ services:
       Platform__OfferAddress: http://offer:8080
       Platform__WalletAddress: http://wallet:8080
       Platform__PrometheusAddress: http://prometheus:9090
-      Steward__ModelProvider__Provider: ${STEWARD_MODEL_PROVIDER:-disabled}
+      Steward__ModelProvider__Provider: ${STEWARD_MODEL_PROVIDER:-replay}
+      Steward__ModelProvider__ReplayDirectory: /app/transcripts
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       Steward__Embeddings__Provider: ${STEWARD_EMBEDDINGS:-ollama}
       Steward__Embeddings__OllamaAddress: ${OLLAMA_ADDRESS:-http://host.docker.internal:11434}

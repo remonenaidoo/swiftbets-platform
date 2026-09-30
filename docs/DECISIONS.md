@@ -338,3 +338,33 @@ A non-idempotent call is retried only when it carries an idempotency key.
 - Poison message publishes a malformed result, and duplicate settlement re-publishes a real settlement under a new event id.
 - Drills are refused in Production.
 - Live run on 30 Sep: all four opened incidents within seconds of the fault. Stuck coupon waits for the reconciler's pass.
+
+**D70. Contract JSON writes nulls; it never omits them (contracts 0.4.1).**
+- Every constructor parameter is required on read. Omitting nulls on write therefore made any nullable field unreadable: `IncidentUpdatedV1` with no root cause was stuck redelivering in realtime.
+- `PayoutAttemptV1.LastError` had the same latent defect.
+- TypeScript contracts type these fields as `T | null` (0.4.2).
+
+**D71. Realtime is a Kafka-to-SignalR bridge whose groups come from the token.**
+- Groups are `ops` (operators), `punter:{sub}` (automatic) and `fixture:{id}` (client-chosen, public prices only).
+- Every group has a Redis INCR sequence. A gap, or a reconnect, makes the dashboard re-read over HTTP.
+- The Redis backplane fans deltas out across replicas. The Kafka group is per deployment, so each event is pushed once.
+- Browsers reach the hub at `/api/hubs/live` through the gateway. The session cookie is scoped to `/api`, so the hub sits under it instead of widening the cookie. Native clients pass `access_token`, on hub paths only.
+
+**D72. Steward's live events are notifications, not the record.**
+- A decorator publishes after each stored change. A failed publish is logged and never fails the change.
+- The dashboard re-reads the incident over HTTP.
+
+**D73. A signal within 15 minutes of a failed diagnosis folds into that incident.**
+- Without this, a wallet still down opened a new incident every 15-second probe.
+
+**D74. Replay is the default local model provider; transcripts are templated.**
+- `{{subject}}` becomes the live incident's subject, so the scripted model queries the real incident.
+- The evidence validator still checks excerpts against the live tool output, and the executor really runs.
+- The E2E and keyless demos exercise the whole pipeline at no cost. `make eval-live` is the gate against the real model.
+
+**D75. Dashboard event types mirror `@swiftbets/contracts` locally.**
+- Consuming the npm package in CI would need registry credentials for a public demo.
+- The C# contracts stay the source, and their generated TS file is the reference the mirror follows.
+
+**D76. Every .NET repo pins shared packages transitively.**
+- Projects that reach contracts only through building-blocks resolved a different version and failed restore on CI (NU1603).
