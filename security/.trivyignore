@@ -1,0 +1,5 @@
+# Time-boxed exceptions only. Each entry: why it does not apply, and an expiry after which the gate fails again.
+
+# openssl DTLS handshake information disclosure. Fixed in Ubuntu 3.0.13-0ubuntu3.16, not yet in mcr dotnet chiseled images (built 2026-09-04).
+# SwiftBets uses TLS over TCP only (SQL Server, Kafka, HTTPS); no component speaks DTLS.
+CVE-2026-84782 exp:2026-10-31
