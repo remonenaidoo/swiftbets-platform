@@ -31,3 +31,6 @@ logs:
 
 topics:
 	$(COMPOSE) run --rm topics
+
+eval-live: ## Phase 3 gate: 4 faults x 3 runs against the live model (spends API credit)
+	CONFIRM_SPEND=$(CONFIRM_SPEND) python3 eval/eval-live.py 3
