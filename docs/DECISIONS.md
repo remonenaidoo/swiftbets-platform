@@ -252,3 +252,54 @@ A non-idempotent call is retried only when it carries an idempotency key.
 - Either way there is one intent, one reserve and one coupon.
 
 **D53. Bet-history projector moves to Phase 2.** It projects `coupon-settled` and `payout-completed`, which do not exist until Phase 2. Placement's own `GET /coupons/{id}` covers Phase 1.
+
+## Phase 2
+
+**D54. Settlement is two-stage over Kafka, with SQL as the truth and Redis as the gate.**
+- The evaluator writes one leg evaluation per (leg, result version) together with a `leg-evaluated` outbox event.
+- The settler counts resolved legs in Redis with a Lua script guarded by a token (`legId:resultVersion`). A redelivered evaluation cannot advance a coupon twice.
+- When all legs are resolved, the settler reads the latest evaluation of every leg from SQL under a coupon lock. It writes a new settlement version only if the outcome or payout changed.
+- If a token is redelivered and the coupon is already complete, the settler still runs as a no-op. That closes the window between the Redis update and the SQL commit.
+
+**D55. The priority gate works on (result version, status).**
+- A later version always wins. Within one version the precedence is void > correction > official > provisional.
+- Provisional results are recorded but never settled.
+- A result equal to or below the stored one is a no-op (duplicate-result gate).
+
+**D56. A result that lands before the coupon is indexed is still settled.**
+- The indexer evaluates legs whose result already exists, in the same transaction that indexes them.
+- A race where both transactions miss each other is repaired by the reconciler's unevaluated-legs pass, which covers the last hour of results, within one interval. It uses row locks only, with no range locks (see D44 for why).
+
+**D57. The reconciler repairs rather than just reporting.**
+- `SettlementPending` is set on every new evaluation and cleared by the settler, including on a no-op. A filtered index keeps the "fully evaluated but unsettled" scan proportional to pending work, not to history.
+- Repairs rebuild the Redis progress from SQL, settle, and emit `stuck-coupon`.
+- The same path backs the operator's `POST /coupons/{id}/refresh`.
+
+**D58. Payout is delta-based with versioned keys.**
+- For each settlement version: `delta = target − paidToDate`, using key `{coupon}_bet1_{WIN|VOID_REFUND|RESETTLE_CREDIT|RESETTLE_DEBIT}_{version}`.
+- A stale or repeated version is a no-op (`LastVersion` guard).
+- The attempt message carries the settlement outcome, so every retry derives exactly the same key as the first attempt (contracts 0.3.1). Without it, a retried void-refund could be keyed as a win and paid twice.
+
+**D59. There is a per-coupon payout lease.**
+- Only one worker moves a coupon's money at a time: a 30-second lease column, with expiry as the crash safety net.
+- A contended attempt goes onto the ladder instead of waiting.
+- The lease matters because a ladder retry of v1 and a direct v2 can otherwise compute deltas from the same paid-to-date.
+
+**D60. The ladder is named-step, on topics, with no sleeping.**
+- The rungs are `payout.retry-5s/1m/15m`. Each attempt carries its `step`, `attempt` and a `retry-due-at` header; the rung's consumer pauses the partition until it is due.
+- Past the last rung, a blacklisted wallet or any other refusal goes to `payout.DeadLetters` plus the dead-letter topic, and operators replay it via `POST /dead-letters/{coupon}/{version}/replay`.
+- `PublishCompleted` is not a separate step: the completed event is written through the outbox in the same transaction as `RecordPayment`.
+- **Measured live:** with the wallet container stopped, 241 attempts took the 5-second rung and 233 the 1-minute rung. After restart everything drained through the 15-minute rung: 41,391 coupons settled and paid, owed = paid = credited = 4,149,873, 0 duplicate keys, 0 dead letters.
+
+**D61. A consumer host never dies of one message** (building-blocks 0.3.1).
+- Live testing found that a dead-letter publish to a missing topic threw out of the consume loop and stopped the host. The restart policy then crash-looped it on the same message.
+- Anything that escapes processing is now a paused, backed-off redelivery.
+- DLQ topics are provisioned as `<topic>.<env>.dlq`, matching `TopicName.DeadLetter()`.
+
+**D62. The replay publishes corrections.** Every 25th match's official result is corrected one slot later with a score that changes the outcome, so resettlement and clawback debits happen continuously in the demo.
+
+**D63. Bet history is a Postgres read model in the placement process.**
+- `history.coupons` is fed by the placed, settled and paid events, as idempotent upserts guarded by settlement and payout version.
+- A settlement that arrives before its placement converges to a complete row.
+- It serves `GET /me/coupons`.
+- It matched the payout ledger exactly on 41,391 coupons.
