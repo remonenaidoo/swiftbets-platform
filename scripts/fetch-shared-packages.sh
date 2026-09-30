@@ -10,7 +10,7 @@ mkdir -p "$feed"
 props="$root/Directory.Packages.props"
 [[ -f "$props" ]] || { echo "no Directory.Packages.props in $root"; exit 0; }
 
-grep -oE 'Include="SwiftBets\.[A-Za-z.]+" Version="[^"]+"' "$props" |
+{ grep -oE 'Include="SwiftBets\.[A-Za-z.]+" Version="[^"]+"' "$props" || true; } |
   sed -E 's/Include="([^"]+)" Version="([^"]+)"/\1 \2/' |
   while read -r package version; do
     case "$package" in
