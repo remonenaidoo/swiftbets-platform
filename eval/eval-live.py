@@ -54,7 +54,7 @@ def grade(fault, details):
     cause = (report["rootCause"] + " " + report["hypothesis"]).lower()
     if not any(w in cause for w in words):
         problems.append(f"root cause does not mention any of {words}: {report['rootCause']!r}")
-    outputs = {c["toolUseId"]: c["output"] for c in details["toolCalls"]}
+    outputs = {c["toolCallId"]: c["outputJson"] for c in details["toolCalls"]}
     subject = details["incident"]["subject"]
     if not any(subject in outputs.get(e["toolCallId"], "") for e in report["evidence"]):
         problems.append(f"no cited tool result contains the faulted subject {subject}")

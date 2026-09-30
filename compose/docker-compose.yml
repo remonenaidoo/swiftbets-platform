@@ -391,6 +391,9 @@ services:
       <<: *dotnet-env
       Kafka__ClientId: swiftbets-realtime
       ConnectionStrings__Redis: redis:6379
+      Jwt__Authority: http://placement:8080
+      Jwt__RequireHttpsMetadata: "false"
+    ports: ["127.0.0.1:7107:8080"]
     healthcheck: { <<: *dotnet-healthcheck, test: ["CMD", "dotnet", "/app/SwiftBets.Realtime.Api.dll", "--healthcheck"] }
     depends_on:
       topics: { condition: service_completed_successfully }
