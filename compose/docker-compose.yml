@@ -246,6 +246,15 @@ services:
     depends_on:
       postgres: { condition: service_healthy }
 
+  history-migrator:
+    <<: *migrator
+    image: ghcr.io/remonenaidoo/swiftbets-history-migrator:${SWIFTBETS_TAG:-local}
+    build: { context: ../../swiftbets-placement, dockerfile: deploy/SwiftBets.History.Migrator.Dockerfile }
+    environment:
+      ConnectionStrings__SbHistory: Host=postgres;Database=sb_history;Username=history_app;Password=${HISTORY_DB_PASSWORD}
+    depends_on:
+      postgres: { condition: service_healthy }
+
   offer:
     <<: *dotnet-service
     image: ghcr.io/remonenaidoo/swiftbets-offer:${SWIFTBETS_TAG:-local}
@@ -280,9 +289,11 @@ services:
       Wallet__GrpcAddress: http://wallet:8081
       ConnectionStrings__SbPlacement: Server=sqlserver,1433;Database=SbPlacement;User Id=placement_app;Password=${PLACEMENT_DB_PASSWORD};TrustServerCertificate=True
       ConnectionStrings__Redis: redis:6379
+      ConnectionStrings__SbHistory: Host=postgres;Database=sb_history;Username=history_app;Password=${HISTORY_DB_PASSWORD}
     healthcheck: { <<: *dotnet-healthcheck, test: ["CMD", "dotnet", "/app/SwiftBets.Placement.Api.dll", "--healthcheck"] }
     depends_on:
       placement-migrator: { condition: service_completed_successfully }
+      history-migrator: { condition: service_completed_successfully }
       topics: { condition: service_completed_successfully }
       redis: { condition: service_healthy }
 
