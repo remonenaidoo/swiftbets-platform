@@ -1,0 +1,43 @@
+{
+  "uid": "swiftbets-overview",
+  "title": "SwiftBets - Platform overview",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
+  "time": { "from": "now-30m", "to": "now" },
+  "tags": ["swiftbets"],
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Services up",
+      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "refId": "A", "expr": "sum(up{job=\"swiftbets\"})" }]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "HTTP requests / second by service",
+      "gridPos": { "x": 6, "y": 0, "w": 18, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "refId": "A", "expr": "sum by (service) (rate(http_requests_received_total[1m]))", "legendFormat": "{{service}}" }]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Outbox pending",
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "refId": "A", "expr": "swiftbets_outbox_pending", "legendFormat": "{{service}}" }]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Messages consumed / second by outcome",
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "refId": "A", "expr": "sum by (outcome) (rate(swiftbets_messages_consumed_total[1m]))", "legendFormat": "{{outcome}}" }]
+    }
+  ]
+}

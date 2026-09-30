@@ -1,0 +1,26 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: swiftbets
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - offer:8080
+          - placement:8080
+          - wallet:8080
+          - settlement:8080
+          - payout:8080
+          - steward:8080
+          - gateway:8080
+          - realtime:8080
+          - risk:8080
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: '([^:]+):.*'
+        target_label: service
+  - job_name: redpanda
+    metrics_path: /public_metrics
+    static_configs:
+      - targets: ['redpanda:9644']

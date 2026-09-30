@@ -1,0 +1,7 @@
+apiVersion: 1
+providers:
+  - name: swiftbets
+    folder: SwiftBets
+    type: file
+    options:
+      path: /var/lib/grafana/dashboards

@@ -1,0 +1,396 @@
+name: swiftbets
+
+x-dotnet-service: &dotnet-service
+  restart: unless-stopped
+  environment: &dotnet-env
+    ASPNETCORE_ENVIRONMENT: Development
+    Kafka__BootstrapServers: redpanda:9092
+    Kafka__Environment: ${SWIFTBETS_ENV:-dev}
+    OTEL_EXPORTER_OTLP_ENDPOINT: http://tempo:4317
+    FaultInjection__Enabled: "false"
+  networks: [swiftbets]
+  mem_limit: 384m
+  cpus: 1.0
+  security_opt: [no-new-privileges:true]
+  read_only: true
+  tmpfs: [/tmp]
+
+x-migrator: &migrator
+  restart: "no"
+  networks: [swiftbets]
+  mem_limit: 256m
+  security_opt: [no-new-privileges:true]
+  read_only: true
+  tmpfs: [/tmp]
+
+x-healthcheck: &dotnet-healthcheck
+  interval: 10s
+  timeout: 5s
+  retries: 12
+  start_period: 20s
+
+services:
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:v26.1.18
+    command:
+      - redpanda
+      - start
+      - --mode=dev-container
+      - --smp=1
+      - --memory=1G
+      - --overprovisioned
+      - --kafka-addr=internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr=internal://redpanda:9092,external://127.0.0.1:7192
+    ports: ["127.0.0.1:7192:19092"]
+    volumes: [redpanda:/var/lib/redpanda/data]
+    networks: [swiftbets]
+    mem_limit: 1536m
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -E 'Healthy:.+true'"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  topics:
+    image: docker.redpanda.com/redpandadata/redpanda:v26.1.18
+    entrypoint: ["/bin/bash", "/topics/provision-topics.sh", "/topics/topics.yaml"]
+    environment:
+      SWIFTBETS_ENV: ${SWIFTBETS_ENV:-dev}
+      REDPANDA_BROKERS: redpanda:9092
+      REDPANDA_ADMIN: redpanda:9644
+    volumes: ["./redpanda:/topics:ro"]
+    networks: [swiftbets]
+    depends_on:
+      redpanda: { condition: service_healthy }
+    restart: "no"
+
+  redpanda-console:
+    image: docker.redpanda.com/redpandadata/console:v3.12.0
+    environment:
+      KAFKA_BROKERS: redpanda:9092
+    ports: ["127.0.0.1:7180:8080"]
+    networks: [swiftbets]
+    mem_limit: 256m
+    depends_on:
+      redpanda: { condition: service_healthy }
+
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2025-CU9-ubuntu-24.04
+    platform: linux/amd64
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Developer
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?set MSSQL_SA_PASSWORD in .env}
+      MSSQL_MEMORY_LIMIT_MB: "1536"
+    ports: ["127.0.0.1:7133:1433"]
+    volumes: [sqlserver:/var/opt/mssql]
+    networks: [swiftbets]
+    mem_limit: 2g
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q 'SELECT 1' -b -o /dev/null"]
+      interval: 5s
+      timeout: 5s
+      retries: 40
+      start_period: 20s
+
+  sqlserver-init:
+    image: mcr.microsoft.com/mssql/server:2025-CU9-ubuntu-24.04
+    platform: linux/amd64
+    entrypoint:
+      - /opt/mssql-tools18/bin/sqlcmd
+      - -C
+      - -S
+      - sqlserver
+      - -U
+      - sa
+      - -b
+      - -i
+      - /init/init.sql
+    environment:
+      SQLCMDPASSWORD: ${MSSQL_SA_PASSWORD}
+      PLACEMENT_DB_PASSWORD: ${PLACEMENT_DB_PASSWORD}
+      WALLET_DB_PASSWORD: ${WALLET_DB_PASSWORD}
+      SETTLEMENT_DB_PASSWORD: ${SETTLEMENT_DB_PASSWORD}
+      PAYOUT_DB_PASSWORD: ${PAYOUT_DB_PASSWORD}
+    volumes: ["./sqlserver:/init:ro"]
+    networks: [swiftbets]
+    depends_on:
+      sqlserver: { condition: service_healthy }
+    restart: "no"
+
+  postgres:
+    image: pgvector/pgvector:0.8.6-pg17-trixie
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      STEWARD_DB_PASSWORD: ${STEWARD_DB_PASSWORD}
+      HISTORY_DB_PASSWORD: ${HISTORY_DB_PASSWORD}
+    ports: ["127.0.0.1:7134:5432"]
+    volumes:
+      - postgres:/var/lib/postgresql/data
+      - ./postgres:/docker-entrypoint-initdb.d:ro
+    networks: [swiftbets]
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d sb_steward"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  redis:
+    image: redis:8.6-alpine
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "noeviction"]
+    ports: ["127.0.0.1:7135:6379"]
+    volumes: [redis:/data]
+    networks: [swiftbets]
+    mem_limit: 320m
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  tempo:
+    image: grafana/tempo:3.1.0
+    command: ["-config.file=/etc/tempo/tempo.yaml"]
+    volumes:
+      - ./tempo/tempo.yaml:/etc/tempo/tempo.yaml:ro
+      - tempo:/var/tempo
+    networks: [swiftbets]
+    mem_limit: 512m
+
+  prometheus:
+    image: prom/prometheus:v3.15.0
+    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.retention.time=7d"]
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus:/prometheus
+    ports: ["127.0.0.1:7190:9090"]
+    networks: [swiftbets]
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9090/-/ready"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  grafana:
+    image: grafana/grafana:13.0.10
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?set GRAFANA_ADMIN_PASSWORD in .env}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana:/var/lib/grafana
+    ports: ["127.0.0.1:7130:3000"]
+    networks: [swiftbets]
+    mem_limit: 384m
+    depends_on: [prometheus, tempo]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+
+  placement-migrator:
+    <<: *migrator
+    image: ghcr.io/remonenaidoo/swiftbets-placement-migrator:${SWIFTBETS_TAG:-local}
+    build: { context: ../../swiftbets-placement, dockerfile: deploy/SwiftBets.Placement.Migrator.Dockerfile }
+    environment:
+      ConnectionStrings__SbPlacement: Server=sqlserver,1433;Database=SbPlacement;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True
+      Migrator__EnsureDatabase: "true"
+      Migrator__AppLogin: placement_app
+    depends_on:
+      sqlserver-init: { condition: service_completed_successfully }
+
+  wallet-migrator:
+    <<: *migrator
+    image: ghcr.io/remonenaidoo/swiftbets-wallet-migrator:${SWIFTBETS_TAG:-local}
+    build: { context: ../../swiftbets-placement, dockerfile: deploy/SwiftBets.Wallet.Migrator.Dockerfile }
+    environment:
+      ConnectionStrings__SbWallet: Server=sqlserver,1433;Database=SbWallet;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True
+      Migrator__EnsureDatabase: "true"
+      Migrator__AppLogin: wallet_app
+    depends_on:
+      sqlserver-init: { condition: service_completed_successfully }
+
+  settlement-migrator:
+    <<: *migrator
+    image: ghcr.io/remonenaidoo/swiftbets-settlement-migrator:${SWIFTBETS_TAG:-local}
+    build: { context: ../../swiftbets-settlement, dockerfile: deploy/SwiftBets.Settlement.Migrator.Dockerfile }
+    environment:
+      ConnectionStrings__SbSettlement: Server=sqlserver,1433;Database=SbSettlement;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True
+      Migrator__EnsureDatabase: "true"
+      Migrator__AppLogin: settlement_app
+    depends_on:
+      sqlserver-init: { condition: service_completed_successfully }
+
+  payout-migrator:
+    <<: *migrator
+    image: ghcr.io/remonenaidoo/swiftbets-payout-migrator:${SWIFTBETS_TAG:-local}
+    build: { context: ../../swiftbets-payout, dockerfile: deploy/SwiftBets.Payout.Migrator.Dockerfile }
+    environment:
+      ConnectionStrings__SbPayout: Server=sqlserver,1433;Database=SbPayout;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True
+      Migrator__EnsureDatabase: "true"
+      Migrator__AppLogin: payout_app
+    depends_on:
+      sqlserver-init: { condition: service_completed_successfully }
+
+  steward-migrator:
+    <<: *migrator
+    image: ghcr.io/remonenaidoo/swiftbets-steward-migrator:${SWIFTBETS_TAG:-local}
+    build: { context: ../../swiftbets-steward, dockerfile: deploy/SwiftBets.Steward.Migrator.Dockerfile }
+    environment:
+      ConnectionStrings__SbSteward: Host=postgres;Database=sb_steward;Username=steward_app;Password=${STEWARD_DB_PASSWORD}
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  offer:
+    <<: *dotnet-service
+    image: ghcr.io/remonenaidoo/swiftbets-offer:${SWIFTBETS_TAG:-local}
+    build: { context: ../../swiftbets-offer, dockerfile: deploy/SwiftBets.Offer.Api.Dockerfile }
+    environment:
+      <<: *dotnet-env
+      Kafka__ClientId: swiftbets-offer
+      ConnectionStrings__Redis: redis:6379
+    healthcheck: { <<: *dotnet-healthcheck, test: ["CMD", "dotnet", "/app/SwiftBets.Offer.Api.dll", "--healthcheck"] }
+    depends_on:
+      topics: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+
+  placement:
+    <<: *dotnet-service
+    image: ghcr.io/remonenaidoo/swiftbets-placement:${SWIFTBETS_TAG:-local}
+    build: { context: ../../swiftbets-placement, dockerfile: deploy/SwiftBets.Placement.Api.Dockerfile }
+    environment:
+      <<: *dotnet-env
+      Kafka__ClientId: swiftbets-placement
+      ConnectionStrings__SbPlacement: Server=sqlserver,1433;Database=SbPlacement;User Id=placement_app;Password=${PLACEMENT_DB_PASSWORD};TrustServerCertificate=True
+      ConnectionStrings__Redis: redis:6379
+    healthcheck: { <<: *dotnet-healthcheck, test: ["CMD", "dotnet", "/app/SwiftBets.Placement.Api.dll", "--healthcheck"] }
+    depends_on:
+      placement-migrator: { condition: service_completed_successfully }
+      topics: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+
+  wallet:
+    <<: *dotnet-service
+    image: ghcr.io/remonenaidoo/swiftbets-wallet:${SWIFTBETS_TAG:-local}
+    build: { context: ../../swiftbets-placement, dockerfile: deploy/SwiftBets.Wallet.Api.Dockerfile }
+    environment:
+      <<: *dotnet-env
+      Kafka__ClientId: swiftbets-wallet
+      ConnectionStrings__SbWallet: Server=sqlserver,1433;Database=SbWallet;User Id=wallet_app;Password=${WALLET_DB_PASSWORD};TrustServerCertificate=True
+    healthcheck: { <<: *dotnet-healthcheck, test: ["CMD", "dotnet", "/app/SwiftBets.Wallet.Api.dll", "--healthcheck"] }
+    depends_on:
+      wallet-migrator: { condition: service_completed_successfully }
+      topics: { condition: service_completed_successfully }
+
+  settlement:
+    <<: *dotnet-service
+    image: ghcr.io/remonenaidoo/swiftbets-settlement:${SWIFTBETS_TAG:-local}
+    build: { context: ../../swiftbets-settlement, dockerfile: deploy/SwiftBets.Settlement.Worker.Dockerfile }
+    environment:
+      <<: *dotnet-env
+      Kafka__ClientId: swiftbets-settlement
+      ConnectionStrings__SbSettlement: Server=sqlserver,1433;Database=SbSettlement;User Id=settlement_app;Password=${SETTLEMENT_DB_PASSWORD};TrustServerCertificate=True
+      ConnectionStrings__Redis: redis:6379
+    healthcheck: { <<: *dotnet-healthcheck, test: ["CMD", "dotnet", "/app/SwiftBets.Settlement.Worker.dll", "--healthcheck"] }
+    depends_on:
+      settlement-migrator: { condition: service_completed_successfully }
+      topics: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+
+  payout:
+    <<: *dotnet-service
+    image: ghcr.io/remonenaidoo/swiftbets-payout:${SWIFTBETS_TAG:-local}
+    build: { context: ../../swiftbets-payout, dockerfile: deploy/SwiftBets.Payout.Worker.Dockerfile }
+    environment:
+      <<: *dotnet-env
+      Kafka__ClientId: swiftbets-payout
+      ConnectionStrings__SbPayout: Server=sqlserver,1433;Database=SbPayout;User Id=payout_app;Password=${PAYOUT_DB_PASSWORD};TrustServerCertificate=True
+    healthcheck: { <<: *dotnet-healthcheck, test: ["CMD", "dotnet", "/app/SwiftBets.Payout.Worker.dll", "--healthcheck"] }
+    depends_on:
+      payout-migrator: { condition: service_completed_successfully }
+      topics: { condition: service_completed_successfully }
+
+  steward:
+    <<: *dotnet-service
+    image: ghcr.io/remonenaidoo/swiftbets-steward:${SWIFTBETS_TAG:-local}
+    build: { context: ../../swiftbets-steward, dockerfile: deploy/SwiftBets.Steward.Api.Dockerfile }
+    environment:
+      <<: *dotnet-env
+      Kafka__ClientId: swiftbets-steward
+      ConnectionStrings__SbSteward: Host=postgres;Database=sb_steward;Username=steward_app;Password=${STEWARD_DB_PASSWORD}
+    healthcheck: { <<: *dotnet-healthcheck, test: ["CMD", "dotnet", "/app/SwiftBets.Steward.Api.dll", "--healthcheck"] }
+    depends_on:
+      steward-migrator: { condition: service_completed_successfully }
+      topics: { condition: service_completed_successfully }
+
+  realtime:
+    <<: *dotnet-service
+    image: ghcr.io/remonenaidoo/swiftbets-realtime:${SWIFTBETS_TAG:-local}
+    build: { context: ../../swiftbets-realtime, dockerfile: deploy/SwiftBets.Realtime.Api.Dockerfile }
+    environment:
+      <<: *dotnet-env
+      Kafka__ClientId: swiftbets-realtime
+      ConnectionStrings__Redis: redis:6379
+    healthcheck: { <<: *dotnet-healthcheck, test: ["CMD", "dotnet", "/app/SwiftBets.Realtime.Api.dll", "--healthcheck"] }
+    depends_on:
+      topics: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+
+  risk:
+    <<: *dotnet-service
+    image: ghcr.io/remonenaidoo/swiftbets-risk:${SWIFTBETS_TAG:-local}
+    build: { context: ../../swiftbets-risk, dockerfile: deploy/SwiftBets.Risk.Worker.Dockerfile }
+    environment:
+      <<: *dotnet-env
+      Kafka__ClientId: swiftbets-risk
+    healthcheck: { <<: *dotnet-healthcheck, test: ["CMD", "dotnet", "/app/SwiftBets.Risk.Worker.dll", "--healthcheck"] }
+    depends_on:
+      topics: { condition: service_completed_successfully }
+
+  gateway:
+    <<: *dotnet-service
+    image: ghcr.io/remonenaidoo/swiftbets-gateway:${SWIFTBETS_TAG:-local}
+    build: { context: ../../swiftbets-gateway, dockerfile: deploy/SwiftBets.Gateway.Api.Dockerfile }
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://tempo:4317
+      FaultInjection__Enabled: "false"
+      ConnectionStrings__Redis: redis:6379
+    ports: ["127.0.0.1:7100:8080"]
+    healthcheck: { <<: *dotnet-healthcheck, test: ["CMD", "dotnet", "/app/SwiftBets.Gateway.Api.dll", "--healthcheck"] }
+    depends_on:
+      redis: { condition: service_healthy }
+
+  dashboard:
+    image: ghcr.io/remonenaidoo/swiftbets-dashboard:${SWIFTBETS_TAG:-local}
+    build: { context: ../../swiftbets-dashboard }
+    ports: ["127.0.0.1:7110:8080"]
+    networks: [swiftbets]
+    mem_limit: 64m
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+
+networks:
+  swiftbets:
+    name: swiftbets
+
+volumes:
+  redpanda:
+  sqlserver:
+  postgres:
+  redis:
+  tempo:
+  prometheus:
+  grafana:

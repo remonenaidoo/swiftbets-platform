@@ -1,0 +1,27 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Compose file is valid
+        run: |
+          cp compose/.env.example compose/.env
+          docker compose --project-directory compose -f compose/docker-compose.yml config -q
+      - name: Shell scripts
+        run: shellcheck scripts/*.sh compose/redpanda/*.sh compose/postgres/*.sh
+      - name: Workflows
+        run: |
+          bash <(curl -sSfL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+          ./actionlint -color
+      - name: Grafana dashboards are valid JSON
+        run: for f in compose/grafana/dashboards/*.json; do python3 -m json.tool "$f" > /dev/null; done
