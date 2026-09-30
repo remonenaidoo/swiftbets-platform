@@ -286,6 +286,7 @@ services:
       Identity__DemoPassword: ${DEMO_PASSWORD:?set DEMO_PASSWORD in .env}
       Identity__LoadTestUserCount: ${LOAD_TEST_USERS:-100}
       Identity__Clients__payout: ${PAYOUT_CLIENT_SECRET:?set PAYOUT_CLIENT_SECRET in .env}
+      Identity__Clients__steward: ${STEWARD_CLIENT_SECRET:?set STEWARD_CLIENT_SECRET in .env}
       Wallet__GrpcAddress: http://wallet:8081
       ConnectionStrings__SbPlacement: Server=sqlserver,1433;Database=SbPlacement;User Id=placement_app;Password=${PLACEMENT_DB_PASSWORD};TrustServerCertificate=True
       ConnectionStrings__Redis: redis:6379
@@ -306,6 +307,7 @@ services:
     environment:
       <<: *dotnet-env
       Kafka__ClientId: swiftbets-wallet
+      FaultInjection__Enabled: "true"
       Jwt__Authority: http://placement:8080
       Jwt__RequireHttpsMetadata: "false"
       ConnectionStrings__SbWallet: Server=sqlserver,1433;Database=SbWallet;User Id=wallet_app;Password=${WALLET_DB_PASSWORD};TrustServerCertificate=True
@@ -321,6 +323,7 @@ services:
     environment:
       <<: *dotnet-env
       Kafka__ClientId: swiftbets-settlement
+      FaultInjection__Enabled: "true"
       Jwt__Authority: http://placement:8080
       Jwt__RequireHttpsMetadata: "false"
       ConnectionStrings__SbSettlement: Server=sqlserver,1433;Database=SbSettlement;User Id=settlement_app;Password=${SETTLEMENT_DB_PASSWORD};TrustServerCertificate=True
@@ -338,6 +341,7 @@ services:
     environment:
       <<: *dotnet-env
       Kafka__ClientId: swiftbets-payout
+      FaultInjection__Enabled: "true"
       Jwt__Authority: http://placement:8080
       Jwt__RequireHttpsMetadata: "false"
       Wallet__GrpcAddress: http://wallet:8081
@@ -357,7 +361,23 @@ services:
     environment:
       <<: *dotnet-env
       Kafka__ClientId: swiftbets-steward
+      Jwt__Authority: http://placement:8080
+      Jwt__RequireHttpsMetadata: "false"
+      ServiceIdentity__TokenEndpoint: http://placement:8080/auth/token
+      ServiceIdentity__ClientId: steward
+      ServiceIdentity__ClientSecret: ${STEWARD_CLIENT_SECRET}
+      Platform__SettlementAddress: http://settlement:8080
+      Platform__PayoutAddress: http://payout:8080
+      Platform__OfferAddress: http://offer:8080
+      Platform__WalletAddress: http://wallet:8080
+      Platform__PrometheusAddress: http://prometheus:9090
+      Steward__ModelProvider__Provider: ${STEWARD_MODEL_PROVIDER:-disabled}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      Steward__Embeddings__Provider: ${STEWARD_EMBEDDINGS:-ollama}
+      Steward__Embeddings__OllamaAddress: ${OLLAMA_ADDRESS:-http://host.docker.internal:11434}
       ConnectionStrings__SbSteward: Host=postgres;Database=sb_steward;Username=steward_app;Password=${STEWARD_DB_PASSWORD}
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    ports: ["127.0.0.1:7106:8080"]
     healthcheck: { <<: *dotnet-healthcheck, test: ["CMD", "dotnet", "/app/SwiftBets.Steward.Api.dll", "--healthcheck"] }
     depends_on:
       steward-migrator: { condition: service_completed_successfully }

@@ -303,3 +303,38 @@ A non-idempotent call is retried only when it carries an idempotency key.
 - A settlement that arrives before its placement converges to a complete row.
 - It serves `GET /me/coupons`.
 - It matched the payout ledger exactly on 41,391 coupons.
+
+**D64. Steward's model sits behind a port with four providers.**
+- `anthropic` calls the API through the official C# SDK, with the system prompt and tool list cached.
+- `replay` plays recorded transcripts per scenario and never calls out; CI uses it.
+- `disabled` still detects and opens incidents, then records why no diagnosis ran.
+- Any provider can be wrapped by a recorder that writes the transcripts replay plays.
+- The local default is `disabled` until an API key is supplied.
+
+**D65. A report is accepted only when its evidence checks out.**
+- Every evidence excerpt must appear verbatim in the output of the tool call it cites.
+- Every runbook citation must be a section that was actually retrieved.
+- Every proposed action must be on the allow-list (refresh coupon, suspend market, replay a dead letter).
+- One repair round is allowed; after that the incident is stored as a failed diagnosis, with the problems listed.
+
+**D66. Runbook retrieval is hybrid, small-to-big, with a relevance floor.**
+- Sections are indexed with pgvector embeddings and Postgres full text, and the two rankings are fused with reciprocal rank fusion.
+- The whole parent runbook is returned, with the sections that matched.
+- A runbook needs a full-text match or a vector similarity above the floor, so an unrelated query returns nothing rather than the nearest runbook.
+- Embeddings come from local Ollama (`nomic-embed-text`) at no cost. CI uses a deterministic hashing embedder.
+- Only changed sections are re-embedded, keyed by a content hash.
+
+**D67. Remediation is approval-gated and runs once.**
+- Actions are proposed by the model and executed only when an operator approves.
+- Approval is a compare-and-set on the action's status, and the action id travels as the idempotency key.
+- A second decision on the same action is refused, and every decision is audited.
+
+**D68. Steward's observers start at the latest offset.**
+- A new consumer group replaying weeks of history delayed live detection by minutes, which it did in the first drill.
+- Building-blocks 0.4.1 adds `StartAtLatest` for new groups. Services that own state keep starting at the earliest offset.
+
+**D69. The four drills exercise real failure paths.**
+- Stuck coupon arms the settler drop, and wallet outage arms `wallet.unavailable` for 3,000 calls.
+- Poison message publishes a malformed result, and duplicate settlement re-publishes a real settlement under a new event id.
+- Drills are refused in Production.
+- Live run on 30 Sep: all four opened incidents within seconds of the fault. Stuck coupon waits for the reconciler's pass.
