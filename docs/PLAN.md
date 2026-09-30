@@ -223,7 +223,7 @@ A `ProjectReferencesTests` test fails the build if a reference points outward.
     - an outbox rollback leaves no row;
     - the relay claims under concurrency;
   - **kill-mid-saga**: a fault point after reserve, then the host is stopped; the sweeper releases and the balance is restored;
-  - **duplicate debit**: 20 concurrent requests with the same key produce 1 ledger debit and 19 replays of the original response;
+  - **duplicate debit**: 20 concurrent requests with the same key produce 1 ledger debit; the rest get the stored response or `409 placement_in_progress` (D52);
   - **wallet outage during placement**: fails fast with a typed `wallet_unavailable` error and no orphaned reservation;
   - contract test: `coupon-placed` against the schema;
   - k6: placement and wallet.

@@ -206,3 +206,49 @@ A non-idempotent call is retried only when it carries an idempotency key.
 **D42. CI token scopes.** `dotnet.yml` (build, test, scan, images) needs at most `packages: write` and `security-events: write`. Releasing lives in a separate `dotnet-release.yml` whose one job holds `contents: write`, and only the two package repos call it, on `v*` tags. Reusable workflows are referenced `@main` because they live in the same owner's repository and change together with the platform. Pinning them to a commit SHA is the hardening step once the workflows stabilise (Phase 5).
 
 **D43. Image vulnerability exceptions.** Trivy blocks CRITICAL/HIGH findings that have a fix. When the fix exists upstream but the vendor base image has not been rebuilt yet (chiseled images cannot be patched with apt), the finding goes into `security/.trivyignore` with a written reason why it does not apply and an `exp:` date. When the date passes, the gate fails again. First entry: CVE-2026-84782 (openssl DTLS; SwiftBets uses no DTLS), expiring 2026-10-31.
+
+## Phase 1
+
+**D44. Wallet idempotency: the unique index arbitrates, with no range locks.**
+- The first design looked the key up with `UPDLOCK, HOLDLOCK`. On a key that does not exist, that takes a key-range lock on the index gap. Coupon ids are time-ordered (UUIDv7), so every new key lands in the same gap, and every reserve in the system serialised: wallet p99 was 1.74 s at 150/s.
+- Now the key is looked up without a lock, the account row is locked (`UPDLOCK, ROWLOCK`), and the keyed posting row is inserted first.
+- If a concurrent request committed the key first, the unique violation rolls this attempt back and the stored result is replayed.
+- The concurrent duplicate-debit test (20 requests, one key, exactly one debit) guards it.
+
+**D45. `READ_COMMITTED_SNAPSHOT` on every SwiftBets SQL Server database.**
+- The migrator turns it on, matching Azure SQL's default.
+- Readers no longer queue behind writers.
+- No money path depends on read blocking: they use explicit `UPDLOCK`/`READPAST` and unique indexes.
+
+**D46. The fixture liability cap is soft and lives in Redis.**
+- A SQL counter row per fixture became a hot row: about 20 open fixtures, most coupons touching several of them, and locks held until commit. It pushed p99 to 1.9 s.
+- Now the placement check reads a Redis hash and the committed coupon's payout is added with `HINCRBY` after commit. Concurrent placements can overshoot by a few coupons.
+- Exact, real-time liability is the risk service's job (Phase 8).
+
+**D47. Saga state `Compensating`.**
+- The sweeper's claim moves unfinished, unpersisted intents to `Compensating` in the same statement.
+- The live saga advances only by conditional transitions (`Started`→`Reserved`→`Persisted`).
+- If the live saga loses that race, it releases its own reservation.
+- This closes the window in which a slow reserve could land after the sweeper resolved the intent.
+
+**D48. Top-up opens the wallet account.** A punter's account is created by their first operator top-up, which is a balanced posting from the funding account. Load-test punters are funded this way.
+
+**D49. Gateway rate limits are configuration.**
+- Production defaults are 10 logins per IP per minute, 120 placements per user per minute (partitioned by the unverified `sub`), and 600 requests per IP per minute.
+- The local stack sets load-test values, because every k6 request arrives from one IP.
+- A forged token only buys itself its own rate-limit bucket and a 401 downstream.
+
+**D50. Hot-path resources.**
+- Placement, wallet and gateway get 2 CPUs and 512 MB. At 1 CPU, cgroup throttling (11% of scheduler periods on placement) was the entire p99 tail.
+- **Measured on one node:** 150 placements/s sustained, p50 14 ms, p95 32 ms, p99 117 ms, no dropped iterations.
+
+**D51. The outbox relay publishes keys in parallel.**
+- Up to 16 keys at once; each key strictly in sequence, stopping at the first failure.
+- This keeps per-partition order and removes the single-publisher throughput cap (backlog peaked at 291 at 150/s).
+
+**D52. Concurrent duplicates of one placement request.**
+- Exactly one request places the coupon.
+- The others get either the stored response (`Idempotent-Replay: true`), or `409 placement_in_progress` while the first is still running.
+- Either way there is one intent, one reserve and one coupon.
+
+**D53. Bet-history projector moves to Phase 2.** It projects `coupon-settled` and `payout-completed`, which do not exist until Phase 2. Placement's own `GET /coupons/{id}` covers Phase 1.
