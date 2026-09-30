@@ -28,8 +28,14 @@ topics:
     retention.ms: 2592000000
   - name: swiftbets.settlement.stuck-coupon.v1
   - name: swiftbets.payout.retry-5s.v1
+  - name: swiftbets.payout.retry-5s.v1.dlq
+    retention.ms: 2592000000
   - name: swiftbets.payout.retry-1m.v1
+  - name: swiftbets.payout.retry-1m.v1.dlq
+    retention.ms: 2592000000
   - name: swiftbets.payout.retry-15m.v1
+  - name: swiftbets.payout.retry-15m.v1.dlq
+    retention.ms: 2592000000
   - name: swiftbets.payout.dead-letter.v1
     retention.ms: 2592000000
   - name: swiftbets.payout.payout-completed.v1

@@ -20,7 +20,8 @@ awk '
   /^    config:/ { sub(/^    config: *\{ */, ""); sub(/ *\} *$/, ""); gsub(/: /, "="); cfg=$0 }
   END { if (name) print name "|" parts "|" ret "|" cfg }
 ' "$file" | while IFS='|' read -r name partitions retention config; do
-  topic="$name.$environment"
+  # Dead-letter queues follow the code's naming: <topic>.<env>.dlq
+  if [[ "$name" == *.dlq ]]; then topic="${name%.dlq}.$environment.dlq"; else topic="$name.$environment"; fi
   partitions="${partitions:-$default_partitions}"
   retention="${retention:-$default_retention}"
   args=(-c "retention.ms=$retention")

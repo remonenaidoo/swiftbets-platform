@@ -310,6 +310,8 @@ services:
     environment:
       <<: *dotnet-env
       Kafka__ClientId: swiftbets-settlement
+      Jwt__Authority: http://placement:8080
+      Jwt__RequireHttpsMetadata: "false"
       ConnectionStrings__SbSettlement: Server=sqlserver,1433;Database=SbSettlement;User Id=settlement_app;Password=${SETTLEMENT_DB_PASSWORD};TrustServerCertificate=True
       ConnectionStrings__Redis: redis:6379
     healthcheck: { <<: *dotnet-healthcheck, test: ["CMD", "dotnet", "/app/SwiftBets.Settlement.Worker.dll", "--healthcheck"] }
@@ -325,6 +327,12 @@ services:
     environment:
       <<: *dotnet-env
       Kafka__ClientId: swiftbets-payout
+      Jwt__Authority: http://placement:8080
+      Jwt__RequireHttpsMetadata: "false"
+      Wallet__GrpcAddress: http://wallet:8081
+      ServiceIdentity__TokenEndpoint: http://placement:8080/auth/token
+      ServiceIdentity__ClientId: payout
+      ServiceIdentity__ClientSecret: ${PAYOUT_CLIENT_SECRET}
       ConnectionStrings__SbPayout: Server=sqlserver,1433;Database=SbPayout;User Id=payout_app;Password=${PAYOUT_DB_PASSWORD};TrustServerCertificate=True
     healthcheck: { <<: *dotnet-healthcheck, test: ["CMD", "dotnet", "/app/SwiftBets.Payout.Worker.dll", "--healthcheck"] }
     depends_on:
