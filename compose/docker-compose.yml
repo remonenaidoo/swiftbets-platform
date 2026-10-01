@@ -424,6 +424,9 @@ services:
       FaultInjection__Enabled: "false"
       ConnectionStrings__Redis: redis:6379
       Gateway__IdentityAddress: http://placement:8080
+      # Open preview: sign visitors in as this demo account automatically. Off when empty.
+      Gateway__DemoSignIn__Username: ${GATEWAY_DEMO_SIGN_IN_USER:-}
+      Gateway__DemoSignIn__Password: ${GATEWAY_DEMO_SIGN_IN_PASSWORD:-}
       Gateway__RateLimits__LoginPerMinute: ${GATEWAY_LOGIN_PER_MINUTE:-600}
       Gateway__RateLimits__PlacementsPerUserPerMinute: ${GATEWAY_PLACEMENTS_PER_USER_PER_MINUTE:-20000}
       Gateway__RateLimits__RequestsPerIpPerMinute: ${GATEWAY_REQUESTS_PER_IP_PER_MINUTE:-200000}
