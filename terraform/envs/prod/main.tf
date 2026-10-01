@@ -38,7 +38,7 @@ module "azure_sql" {
 }
 
 resource "random_password" "db" {
-  for_each = toset(concat(local.services, ["steward", "history", "notifications", "postgres"]))
+  for_each = toset(concat(local.services, ["steward", "history", "notifications", "config", "postgres"]))
   length   = 32
   special  = false
 }
@@ -82,9 +82,11 @@ resource "kubernetes_secret_v1" "swiftbets" {
       "steward-db-password"        = random_password.db["steward"].result
       "history-db-password"        = random_password.db["history"].result
       "notifications-db-password"  = random_password.db["notifications"].result
+      "config-db-password"         = random_password.db["config"].result
       "sb-steward"                 = "Host=postgres;Database=sb_steward;Username=steward_app;Password=${random_password.db["steward"].result}"
       "sb-history"                 = "Host=postgres;Database=sb_history;Username=history_app;Password=${random_password.db["history"].result}"
       "sb-notifications"           = "Host=postgres;Database=sb_notifications;Username=notifications_app;Password=${random_password.db["notifications"].result}"
+      "sb-config"                  = "Host=postgres;Database=sb_config;Username=config_app;Password=${random_password.db["config"].result}"
       "anthropic-api-key"          = var.anthropic_api_key
       "identity-signing-key"       = tls_private_key.identity.private_key_pem
     },

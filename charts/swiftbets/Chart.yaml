@@ -17,6 +17,7 @@ dependencies:
   - { name: payments, version: 0.1.0, repository: file://../payments, condition: payments.enabled }
   - { name: payments-simulator, version: 0.1.0, repository: file://../payments-simulator, condition: payments-simulator.enabled }
   - { name: notifications, version: 0.1.0, repository: file://../notifications, condition: notifications.enabled }
+  - { name: config, version: 0.1.0, repository: file://../config, condition: config.enabled }
   - { name: settlement, version: 0.1.0, repository: file://../settlement }
   - { name: payout, version: 0.1.0, repository: file://../payout }
   - { name: steward, version: 0.1.0, repository: file://../steward }

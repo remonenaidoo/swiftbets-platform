@@ -395,6 +395,31 @@ services:
     depends_on:
       postgres: { condition: service_healthy }
 
+  config-migrator:
+    <<: *migrator
+    image: ghcr.io/remonenaidoo/swiftbets-config-migrator:${SWIFTBETS_TAG:-local}
+    build: { context: ../../swiftbets-config, dockerfile: deploy/SwiftBets.Config.Migrator.Dockerfile }
+    environment:
+      ConnectionStrings__SbConfig: Host=postgres;Database=sb_config;Username=config_app;Password=${CONFIG_DB_PASSWORD}
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  # Kill switch, placement mode, live delays, limits and flags, published on a compacted topic.
+  config:
+    <<: *dotnet-service
+    image: ghcr.io/remonenaidoo/swiftbets-config:${SWIFTBETS_TAG:-local}
+    build: { context: ../../swiftbets-config, dockerfile: deploy/SwiftBets.Config.Api.Dockerfile }
+    environment:
+      <<: *dotnet-env
+      Kafka__ClientId: swiftbets-config
+      Jwt__Authority: http://identity:8080
+      Jwt__RequireHttpsMetadata: "false"
+      ConnectionStrings__SbConfig: Host=postgres;Database=sb_config;Username=config_app;Password=${CONFIG_DB_PASSWORD}
+    healthcheck: { <<: *dotnet-healthcheck, test: ["CMD", "dotnet", "/app/SwiftBets.Config.Api.dll", "--healthcheck"] }
+    depends_on:
+      config-migrator: { condition: service_completed_successfully }
+      topics: { condition: service_completed_successfully }
+
   # Sends every customer email from NotificationRequestedV1; Mailpit catches it in dev.
   notifications:
     <<: *dotnet-service
