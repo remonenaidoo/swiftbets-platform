@@ -78,7 +78,7 @@ echo "ok   credited exactly once despite duplicate and out-of-order webhooks"
 curl -sS -o /dev/null -X PUT "$simulator/__faults" -H 'Content-Type: application/json' -d '{}'
 
 # 3. KYC, then a small withdrawal pays and a large one waits for an operator.
-expect 200 "$(api c POST /me/kyc -d '{"documentType":"idDocument","documentNumber":"9001015009087"}')" "KYC submitted"
+expect 200 "$(api c POST /me/kyc -d '{"documentType":"idDocument","documentNumber":"8001015009087"}')" "KYC submitted"
 until_true c /me/compliance '.kycStatus == "verified"' "KYC verified"
 sleep 3
 expect 201 "$(api c POST /me/withdrawals -d '{"amount":20000,"currency":"ZAR"}')" "small withdrawal accepted"
