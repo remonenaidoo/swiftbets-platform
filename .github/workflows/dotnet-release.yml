@@ -2,6 +2,11 @@ name: dotnet-release
 
 on:
   workflow_call:
+    inputs:
+      version:
+        description: Release version without the v; empty takes it from the pushed tag
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -22,7 +27,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: .platform/scripts/fetch-shared-packages.sh .
-      - run: dotnet pack -c Release -o artifacts -p:Version="${GITHUB_REF_NAME#v}"
+      - env:
+          VERSION: ${{ inputs.version }}
+        run: dotnet pack -c Release -o artifacts -p:Version="${VERSION:-${GITHUB_REF_NAME#v}}"
       - uses: actions/upload-artifact@v7
         with:
           name: nupkg
@@ -38,9 +45,12 @@ jobs:
         with:
           name: nupkg
           path: artifacts
+      # A dispatched release creates its tag on the built commit; a pushed tag already has one.
       - env:
           GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
         run: |
-          gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 \
-            || gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --generate-notes
-          gh release upload "$GITHUB_REF_NAME" artifacts/*.nupkg --repo "$GITHUB_REPOSITORY" --clobber
+          tag="v${VERSION:-${GITHUB_REF_NAME#v}}"
+          gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 \
+            || gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "$tag" --generate-notes
+          gh release upload "$tag" artifacts/*.nupkg --repo "$GITHUB_REPOSITORY" --clobber

@@ -479,7 +479,7 @@ A non-idempotent call is retried only when it carries an idempotency key.
 - Creating repositories is refused for this project's GitHub integration (403), so D89's repos cannot be made from a session yet.
 - Each new service is still its own host with its own database and images (as the wallet already is), so moving it changes no code: `scripts/split-repo.sh` moves it with its history once the repo exists.
 - The identity service is built in `swiftbets-placement`, where the identity module it replaces lives. The customer account screens are built in `swiftbets-mobile`, whose web build is the public site until `swiftbets-web` exists.
-- The identity chart stays switched off until its image is published from placement's `main`; compose already runs it.
+- The identity chart was switched on once its image was published from placement's `main`; compose already ran it.
 
 **D103. Coverage is measured in CI with a branch floor on money-path Domain and Application projects.**
 - `dotnet.yml` takes `coverage` and `coverage-floors`; tests run with the Microsoft Testing Platform coverage extension and emit Cobertura.
@@ -491,3 +491,7 @@ A non-idempotent call is retried only when it carries an idempotency key.
 - `SbWallet` 0003 funded five demo punters in every deployment, production included.
 - 0005 removes seeded punters that were never used (balance untouched, no other posting or reservation), so a demo environment with activity keeps its ledger whole; its rollback puts the seed back.
 - `Migrator:SeedDemo=true` re-applies the seed idempotently after migrations; compose and the default chart values set it, production values set it to false and `check-prod-values.sh` refuses it.
+
+**D105. Shared packages can be released by a dispatched workflow as well as by a pushed tag.**
+- Sessions can push branches but not tags, so the release workflow takes a `version` input and creates the tag through the API on the commit it built.
+- Contracts and building-blocks run it with `workflow_dispatch`; a pushed `v*` tag still works exactly as before.
