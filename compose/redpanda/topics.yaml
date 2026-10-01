@@ -61,3 +61,5 @@ topics:
     retention.ms: 2592000000
   - name: swiftbets.steward.remediation-executed.v1.dlq
     retention.ms: 2592000000
+  - name: swiftbets.offer.fixture-changed.v1.dlq
+    retention.ms: 2592000000
