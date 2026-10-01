@@ -480,3 +480,9 @@ A non-idempotent call is retried only when it carries an idempotency key.
 - Each new service is still its own host with its own database and images (as the wallet already is), so moving it changes no code: `scripts/split-repo.sh` moves it with its history once the repo exists.
 - The identity service is built in `swiftbets-placement`, where the identity module it replaces lives. The customer account screens are built in `swiftbets-mobile`, whose web build is the public site until `swiftbets-web` exists.
 - The identity chart stays switched off until its image is published from placement's `main`; compose already runs it.
+
+**D103. Coverage is measured in CI with a branch floor on money-path Domain and Application projects.**
+- `dotnet.yml` takes `coverage` and `coverage-floors`; tests run with the Microsoft Testing Platform coverage extension and emit Cobertura.
+- `scripts/check-coverage.py` merges every report per assembly (a line counts if any test project hit it), posts a table to the job summary and fails under a floor.
+- Floors sit a few points under what is measured on adoption and only move up; first set for placement: Wallet Domain and Application 70% branch, Placement Domain 70%, Placement Application 55%, Identity Domain 90%, Identity Application 80%.
+- No extra tool is installed: the merge is about 80 lines of Python with its own fixture test in platform CI.

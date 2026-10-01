@@ -7,6 +7,14 @@ on:
         description: 'JSON array of {"name","dockerfile"} images to build from the repository root'
         type: string
         default: '[]'
+      coverage:
+        description: Collect coverage; every test project must reference Microsoft.Testing.Extensions.CodeCoverage
+        type: boolean
+        default: false
+      coverage-floors:
+        description: 'JSON object of assembly name to {"line": pct, "branch": pct} minimums'
+        type: string
+        default: '{}'
 
 permissions:
   contents: read
@@ -36,6 +44,16 @@ jobs:
       - run: dotnet restore
       - run: dotnet build -c Release --no-restore
       - run: dotnet test -c Release --no-build
+        if: ${{ !inputs.coverage }}
+      - run: dotnet test -c Release --no-build --coverage --coverage-output-format cobertura
+        if: inputs.coverage
+      - name: Coverage
+        if: inputs.coverage
+        env:
+          FLOORS: ${{ inputs.coverage-floors }}
+        run: |
+          mapfile -t reports < <(find . -path '*/TestResults/*.cobertura.xml' -not -path './.platform/*')
+          python3 .platform/scripts/check-coverage.py "$FLOORS" "${reports[@]}" | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Vulnerable packages
         run: |
           dotnet list package --vulnerable --include-transitive | tee vulnerable.txt

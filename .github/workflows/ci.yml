@@ -29,6 +29,10 @@ jobs:
         run: scripts/check-secrets.sh
       - name: Prometheus alert rules and their tests
         run: scripts/check-prometheus.sh
+      - name: Coverage floors merge reports and fail under the floor
+        run: |
+          scripts/check-coverage.py '{"Sample.Domain": {"line": 66, "branch": 50}}' scripts/testdata/coverage/*.xml
+          ! scripts/check-coverage.py '{"Sample.Domain": {"branch": 51}}' scripts/testdata/coverage/*.xml
       - name: Grafana dashboards are valid JSON
         run: for f in compose/grafana/dashboards/*.json; do python3 -m json.tool "$f" > /dev/null; done
 
