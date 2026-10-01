@@ -495,3 +495,18 @@ A non-idempotent call is retried only when it carries an idempotency key.
 **D105. Shared packages can be released by a dispatched workflow as well as by a pushed tag.**
 - Sessions can push branches but not tags, so the release workflow takes a `version` input and creates the tag through the API on the commit it built.
 - Contracts and building-blocks run it with `workflow_dispatch`; a pushed `v*` tag still works exactly as before.
+
+**D106. A repository split merges with a merge commit, not a squash.**
+- `split-repo.sh` keeps each moved file's history; squashing the first PR would collapse it into one commit.
+- So the first PR into `swiftbets-wallet` and `swiftbets-identity` merged as a merge commit; every later PR squashes as usual.
+
+**D107. Notifications decides delivery from the request and its own projection, and never stores a body.**
+- One `deliveries` row per notification id makes a redelivered request a no-op; a send failure records nothing, so the retry sends.
+- Marketing goes only to active accounts, from a projection of `AccountStatusChangedV1`; service email (verification, reset) always goes.
+- Senders build their own links; a template lists the data keys it needs and a request missing one is rejected, not sent with a hole.
+- No SMTP host means requests are recorded as skipped, never as sent, and `NotificationsNotSending` alerts.
+- Identity hands account email over with `AccountEmail:Delivery=Notifications`; SMTP from identity stays as the fallback until the chart runs notifications.
+
+**D108. Identity's account events commit in the same transaction as the change.**
+- The store enqueues `UserRegisteredV1`, `EmailVerifiedV1`, `AccountStatusChangedV1` and, when an account leaves Active, `SessionRevokedV1` into the outbox inside the write's transaction.
+- A refused or repeated change publishes nothing; every event is keyed by user id, so one customer's events stay in order.

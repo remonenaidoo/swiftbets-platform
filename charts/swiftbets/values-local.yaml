@@ -15,6 +15,7 @@ localSecrets:
     identity: Local-Dev-Identity-1
     steward: local-dev-steward
     history: local-dev-history
+    notifications: local-dev-notifications
   clientSecrets:
     payout: local-dev-payout-client-secret
     steward: local-dev-steward-client-secret

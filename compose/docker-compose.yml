@@ -125,6 +125,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       STEWARD_DB_PASSWORD: ${STEWARD_DB_PASSWORD}
       HISTORY_DB_PASSWORD: ${HISTORY_DB_PASSWORD}
+      NOTIFICATIONS_DB_PASSWORD: ${NOTIFICATIONS_DB_PASSWORD}
     ports: ["127.0.0.1:7134:5432"]
     volumes:
       - postgres:/var/lib/postgresql/data
@@ -235,13 +236,13 @@ services:
       Identity__LoadTestUserCount: ${LOAD_TEST_USERS:-100}
       Identity__Clients__payout: ${PAYOUT_CLIENT_SECRET:?set PAYOUT_CLIENT_SECRET in .env}
       Identity__Clients__steward: ${STEWARD_CLIENT_SECRET:?set STEWARD_CLIENT_SECRET in .env}
-      AccountEmail__SmtpHost: mailpit
-      AccountEmail__SmtpPort: "1025"
+      Kafka__ClientId: swiftbets-identity
+      AccountEmail__Delivery: Notifications
       AccountEmail__PublicBaseUrl: ${PUBLIC_BASE_URL:-http://127.0.0.1:7100}
     healthcheck: { <<: *dotnet-healthcheck, test: ["CMD", "dotnet", "/app/SwiftBets.Identity.Api.dll", "--healthcheck"] }
     depends_on:
       identity-migrator: { condition: service_completed_successfully }
-      mailpit: { condition: service_started }
+      topics: { condition: service_completed_successfully }
 
   # Catches every account email in dev; the inbox is at http://127.0.0.1:7125.
   mailpit:
@@ -302,6 +303,34 @@ services:
       ConnectionStrings__SbHistory: Host=postgres;Database=sb_history;Username=history_app;Password=${HISTORY_DB_PASSWORD}
     depends_on:
       postgres: { condition: service_healthy }
+
+  notifications-migrator:
+    <<: *migrator
+    image: ghcr.io/remonenaidoo/swiftbets-notifications-migrator:${SWIFTBETS_TAG:-local}
+    build: { context: ../../swiftbets-notifications, dockerfile: deploy/SwiftBets.Notifications.Migrator.Dockerfile }
+    environment:
+      ConnectionStrings__SbNotifications: Host=postgres;Database=sb_notifications;Username=notifications_app;Password=${NOTIFICATIONS_DB_PASSWORD}
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  # Sends every customer email from NotificationRequestedV1; Mailpit catches it in dev.
+  notifications:
+    <<: *dotnet-service
+    image: ghcr.io/remonenaidoo/swiftbets-notifications:${SWIFTBETS_TAG:-local}
+    build: { context: ../../swiftbets-notifications, dockerfile: deploy/SwiftBets.Notifications.Api.Dockerfile }
+    environment:
+      <<: *dotnet-env
+      Kafka__ClientId: swiftbets-notifications
+      Jwt__Authority: http://identity:8080
+      Jwt__RequireHttpsMetadata: "false"
+      ConnectionStrings__SbNotifications: Host=postgres;Database=sb_notifications;Username=notifications_app;Password=${NOTIFICATIONS_DB_PASSWORD}
+      Email__SmtpHost: mailpit
+      Email__SmtpPort: "1025"
+    healthcheck: { <<: *dotnet-healthcheck, test: ["CMD", "dotnet", "/app/SwiftBets.Notifications.Api.dll", "--healthcheck"] }
+    depends_on:
+      notifications-migrator: { condition: service_completed_successfully }
+      topics: { condition: service_completed_successfully }
+      mailpit: { condition: service_started }
 
   offer:
     <<: *dotnet-service
@@ -475,6 +504,9 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://tempo:4317
       FaultInjection__Enabled: "false"
       ConnectionStrings__Redis: redis:6379
+      Kafka__BootstrapServers: redpanda:9092
+      Kafka__Environment: ${SWIFTBETS_ENV:-dev}
+      Kafka__ClientId: swiftbets-gateway
       Gateway__IdentityAddress: http://identity:8080
       ReverseProxy__Clusters__identity__Destinations__primary__Address: http://identity:8080
       # Open preview: sign visitors in as this demo account automatically. Off when empty.
@@ -489,6 +521,7 @@ services:
     healthcheck: { <<: *dotnet-healthcheck, test: ["CMD", "dotnet", "/app/SwiftBets.Gateway.Api.dll", "--healthcheck"] }
     depends_on:
       redis: { condition: service_healthy }
+      topics: { condition: service_completed_successfully }
 
   web:
     image: ghcr.io/remonenaidoo/swiftbets-web:${SWIFTBETS_TAG:-local}
