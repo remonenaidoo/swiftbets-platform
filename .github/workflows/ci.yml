@@ -25,10 +25,8 @@ jobs:
           ./actionlint -color
       - name: Chart copies of the compose init scripts are in sync
         run: scripts/sync-chart-files.sh --check
-      - name: Prometheus config and alert rules
-        run: |
-          docker run --rm -v "$PWD/compose/prometheus:/p" -w /p --entrypoint promtool prom/prometheus:v3.15.0 check rules $(cd compose/prometheus && ls rules/*.yml | grep -v '\.test\.yml$')
-          docker run --rm -v "$PWD/compose/prometheus:/p" -w /p/rules --entrypoint promtool prom/prometheus:v3.15.0 test rules $(cd compose/prometheus/rules && ls *.test.yml)
+      - name: Prometheus alert rules and their tests
+        run: scripts/check-prometheus.sh
       - name: Grafana dashboards are valid JSON
         run: for f in compose/grafana/dashboards/*.json; do python3 -m json.tool "$f" > /dev/null; done
 
