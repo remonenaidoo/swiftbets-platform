@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Renders the umbrella chart with the production values and fails on anything that must never reach production:
-# a moving image tag, demo users, fault injection, demo sign-in, an in-cluster SQL Server or a Development host.
+# a moving image tag, demo users or funded demo wallets, fault injection, demo sign-in, an in-cluster SQL Server or a Development host.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -23,7 +23,7 @@ refuse() {
 }
 
 refuse "an image on a moving tag" 'image: ghcr\.io/.*:(main|latest)$'
-grep -A1 -E 'name: (FaultInjection__Enabled|Identity__SeedDemoUsers)$' "$out" | grep -q 'value: "true"' \
+grep -A1 -E 'name: (FaultInjection__Enabled|Identity__SeedDemoUsers|Migrator__SeedDemo)$' "$out" | grep -q 'value: "true"' \
   && { echo "production values: fault injection or demo users enabled" >&2; failures=$((failures + 1)); }
 refuse "demo sign-in configured" 'Gateway__DemoSignIn'
 refuse "an in-cluster SQL Server" 'name: sqlserver$'

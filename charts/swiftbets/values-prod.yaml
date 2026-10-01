@@ -21,6 +21,12 @@ placement:
   env:
     Identity__SeedDemoUsers: "false"
     Identity__LoadTestUserCount: "0"
+wallet:
+  migrators:
+    - name: wallet-migrator
+      image: { repository: swiftbets-wallet-migrator }
+      env: { Migrator__AppLogin: wallet_app, Migrator__EnsureDatabase: "true", Migrator__SeedDemo: "false" }
+      secretEnv: { ConnectionStrings__SbWallet: { key: sb-wallet-migrate } }
 steward:
   env:
     # Diagnoses only once an API key is configured; until then incidents open and record why no diagnosis ran.

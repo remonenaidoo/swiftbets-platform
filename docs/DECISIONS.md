@@ -486,3 +486,8 @@ A non-idempotent call is retried only when it carries an idempotency key.
 - `scripts/check-coverage.py` merges every report per assembly (a line counts if any test project hit it), posts a table to the job summary and fails under a floor.
 - Floors sit a few points under what is measured on adoption and only move up; first set for placement: Wallet Domain and Application 70% branch, Placement Domain 70%, Placement Application 55%, Identity Domain 90%, Identity Application 80%.
 - No extra tool is installed: the merge is about 80 lines of Python with its own fixture test in platform CI.
+
+**D104. Demo wallets are funded by a migrator switch, not a migration.**
+- `SbWallet` 0003 funded five demo punters in every deployment, production included.
+- 0005 removes seeded punters that were never used (balance untouched, no other posting or reservation), so a demo environment with activity keeps its ledger whole; its rollback puts the seed back.
+- `Migrator:SeedDemo=true` re-applies the seed idempotently after migrations; compose and the default chart values set it, production values set it to false and `check-prod-values.sh` refuses it.

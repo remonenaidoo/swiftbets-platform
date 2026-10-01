@@ -94,7 +94,7 @@ wallet:
   migrators:
     - name: wallet-migrator
       image: { repository: swiftbets-wallet-migrator }
-      env: { Migrator__AppLogin: wallet_app, Migrator__EnsureDatabase: "true" }
+      env: { Migrator__AppLogin: wallet_app, Migrator__EnsureDatabase: "true", Migrator__SeedDemo: "true" }
       secretEnv: { ConnectionStrings__SbWallet: { key: sb-wallet-migrate } }
 
 settlement:

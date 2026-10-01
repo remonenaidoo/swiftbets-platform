@@ -259,6 +259,7 @@ services:
       ConnectionStrings__SbWallet: Server=sqlserver,1433;Database=SbWallet;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True
       Migrator__EnsureDatabase: "true"
       Migrator__AppLogin: wallet_app
+      Migrator__SeedDemo: "true"
     depends_on:
       sqlserver-init: { condition: service_completed_successfully }
 
