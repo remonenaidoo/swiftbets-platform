@@ -426,7 +426,8 @@ services:
       Gateway__RateLimits__LoginPerMinute: ${GATEWAY_LOGIN_PER_MINUTE:-600}
       Gateway__RateLimits__PlacementsPerUserPerMinute: ${GATEWAY_PLACEMENTS_PER_USER_PER_MINUTE:-20000}
       Gateway__RateLimits__RequestsPerIpPerMinute: ${GATEWAY_REQUESTS_PER_IP_PER_MINUTE:-200000}
-    ports: ["127.0.0.1:7100:8080"]
+    # The second port is for a reverse proxy on the host (e.g. a public preview): set GATEWAY_EDGE_BIND=172.17.0.1.
+    ports: ["127.0.0.1:7100:8080", "${GATEWAY_EDGE_BIND:-127.0.0.1}:${GATEWAY_EDGE_PORT:-7101}:8080"]
     healthcheck: { <<: *dotnet-healthcheck, test: ["CMD", "dotnet", "/app/SwiftBets.Gateway.Api.dll", "--healthcheck"] }
     depends_on:
       redis: { condition: service_healthy }
