@@ -382,7 +382,7 @@ services:
   history-migrator:
     <<: *migrator
     image: ghcr.io/remonenaidoo/swiftbets-history-migrator:${SWIFTBETS_TAG:-local}
-    build: { context: ../../swiftbets-placement, dockerfile: deploy/SwiftBets.History.Migrator.Dockerfile }
+    build: { context: ../../swiftbets-bethistory, dockerfile: deploy/SwiftBets.History.Migrator.Dockerfile }
     environment:
       ConnectionStrings__SbHistory: Host=postgres;Database=sb_history;Username=history_app;Password=${HISTORY_DB_PASSWORD}
     depends_on:
@@ -420,6 +420,22 @@ services:
     healthcheck: { <<: *dotnet-healthcheck, test: ["CMD", "dotnet", "/app/SwiftBets.Config.Api.dll", "--healthcheck"] }
     depends_on:
       config-migrator: { condition: service_completed_successfully }
+      topics: { condition: service_completed_successfully }
+
+  # Bet history read model (D126).
+  bethistory:
+    <<: *dotnet-service
+    image: ghcr.io/remonenaidoo/swiftbets-bethistory:${SWIFTBETS_TAG:-local}
+    build: { context: ../../swiftbets-bethistory, dockerfile: deploy/SwiftBets.History.Api.Dockerfile }
+    environment:
+      <<: *dotnet-env
+      Kafka__ClientId: swiftbets-bethistory
+      Jwt__Authority: http://identity:8080
+      Jwt__RequireHttpsMetadata: "false"
+      ConnectionStrings__SbHistory: Host=postgres;Database=sb_history;Username=history_app;Password=${HISTORY_DB_PASSWORD}
+    healthcheck: { <<: *dotnet-healthcheck, test: ["CMD", "dotnet", "/app/SwiftBets.History.Api.dll", "--healthcheck"] }
+    depends_on:
+      history-migrator: { condition: service_completed_successfully }
       topics: { condition: service_completed_successfully }
 
   # Sends every customer email from NotificationRequestedV1; Mailpit catches it in dev.
@@ -486,6 +502,7 @@ services:
       ConnectionStrings__SbPlacement: Server=sqlserver,1433;Database=SbPlacement;User Id=placement_app;Password=${PLACEMENT_DB_PASSWORD};TrustServerCertificate=True
       ConnectionStrings__Redis: redis:6379
       ConnectionStrings__SbHistory: Host=postgres;Database=sb_history;Username=history_app;Password=${HISTORY_DB_PASSWORD}
+      History__RunProjector: "false"
     healthcheck: { <<: *dotnet-healthcheck, test: ["CMD", "dotnet", "/app/SwiftBets.Placement.Api.dll", "--healthcheck"] }
     depends_on:
       placement-migrator: { condition: service_completed_successfully }

@@ -33,6 +33,8 @@ infra:
     enabled: true
 config:
   resources: { requests: { cpu: 20m } }
+bethistory:
+  resources: { requests: { cpu: 20m } }
 notifications:
   resources: { requests: { cpu: 20m } }
   env:

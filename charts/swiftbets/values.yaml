@@ -44,6 +44,8 @@ placement:
     Wallet__GrpcAddress: http://wallet:8081
     ServiceIdentity__TokenEndpoint: http://identity:8080/auth/token
     ServiceIdentity__ClientId: placement
+    # Bet history moved to the bethistory service (D126); placement only reads it until its copy is removed.
+    History__RunProjector: "false"
   secretEnv:
     ServiceIdentity__ClientSecret: { key: placement-client-secret }
     ConnectionStrings__SbPlacement: { key: sb-placement }
@@ -58,9 +60,6 @@ placement:
       image: { repository: swiftbets-placement-migrator }
       env: { Migrator__AppLogin: placement_app, Migrator__EnsureDatabase: "true" }
       secretEnv: { ConnectionStrings__SbPlacement: { key: sb-placement-migrate } }
-    - name: history-migrator
-      image: { repository: swiftbets-history-migrator }
-      secretEnv: { ConnectionStrings__SbHistory: { key: sb-history } }
 
 # Issues every token; placement's identity module stays read-only for one release, then goes (D102).
 identity:
@@ -158,6 +157,19 @@ config:
     - name: config-migrator
       image: { repository: swiftbets-config-migrator }
       secretEnv: { ConnectionStrings__SbConfig: { key: sb-config } }
+
+# Bet history read model, projected from placement, settlement and payout events (D126).
+bethistory:
+  enabled: true
+  image: { repository: swiftbets-bethistory }
+  env:
+    Kafka__ClientId: swiftbets-bethistory
+  secretEnv:
+    ConnectionStrings__SbHistory: { key: sb-history }
+  migrators:
+    - name: history-migrator
+      image: { repository: swiftbets-history-migrator }
+      secretEnv: { ConnectionStrings__SbHistory: { key: sb-history } }
 
 wallet:
   image: { repository: swiftbets-wallet }
