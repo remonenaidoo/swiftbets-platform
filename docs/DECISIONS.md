@@ -526,3 +526,8 @@ A non-idempotent call is retried only when it carries an idempotency key.
 **D112. The audit writer ships with the audit service in E2, not in E1 shared tooling.**
 - E1 has no consumer of `AuditRecordedV1`; writing the helper beside its first reader (compliance) avoids guessing its shape.
 - It lands in building-blocks 0.6.0 alongside contracts 0.6.0.
+
+**D113. The browser session cookie covers the whole site, not just `/api`.**
+- Server-rendered pages (`/account` today, every page later) must see the session; a cookie scoped to `/api` never reaches them.
+- It stays HttpOnly, Secure and SameSite=Strict; each write and sign-out also expires the old `/api` copy.
+- `scripts/gate-e1.sh` proves the E1 gate through the gateway: register, age gate, emailed verification through Mailpit, two devices, revoke one, account page, seeded sign-in. The kind install runs it once identity and wallet publish their own images (they still need package access).

@@ -1,0 +1,10 @@
+apiVersion: v2
+name: site
+description: Server-rendered customer site (React Router on Node), behind the gateway (D110).
+type: application
+version: 0.1.0
+appVersion: main
+dependencies:
+  - name: swiftbets-service
+    version: 0.1.0
+    repository: file://../swiftbets-service
