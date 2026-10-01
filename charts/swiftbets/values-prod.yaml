@@ -21,6 +21,10 @@ placement:
   env:
     Identity__SeedDemoUsers: "false"
     Identity__LoadTestUserCount: "0"
+identity:
+  env:
+    Identity__SeedDemoUsers: "false"
+    Identity__LoadTestUserCount: "0"
 wallet:
   migrators:
     - name: wallet-migrator

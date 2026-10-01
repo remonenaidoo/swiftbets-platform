@@ -479,7 +479,7 @@ A non-idempotent call is retried only when it carries an idempotency key.
 - Creating repositories is refused for this project's GitHub integration (403), so D89's repos cannot be made from a session yet.
 - Each new service is still its own host with its own database and images (as the wallet already is), so moving it changes no code: `scripts/split-repo.sh` moves it with its history once the repo exists.
 - The identity service is built in `swiftbets-placement`, where the identity module it replaces lives. The customer account screens are built in `swiftbets-mobile`, whose web build is the public site until `swiftbets-web` exists.
-- The identity chart stays switched off until its image is published from placement's `main`; compose already runs it.
+- The identity chart was switched on once its image was published from placement's `main`; compose already ran it.
 
 **D103. Coverage is measured in CI with a branch floor on money-path Domain and Application projects.**
 - `dotnet.yml` takes `coverage` and `coverage-floors`; tests run with the Microsoft Testing Platform coverage extension and emit Cobertura.

@@ -6,7 +6,7 @@ global:
   env:
     Kafka__BootstrapServers: redpanda:9093
     Kafka__Environment: dev
-    Jwt__Authority: http://placement:8080
+    Jwt__Authority: http://identity:8080
     Jwt__RequireHttpsMetadata: "false"
     FaultInjection__Enabled: "false"
 
@@ -59,17 +59,18 @@ placement:
       image: { repository: swiftbets-history-migrator }
       secretEnv: { ConnectionStrings__SbHistory: { key: sb-history } }
 
-# Off until the swiftbets-identity image is published from placement's main; then set enabled and point the
-# gateway (Gateway__IdentityAddress, the identity cluster) and every Jwt__Authority at http://identity:8080.
+# Issues every token; placement's identity module stays read-only for one release, then goes (D102).
 identity:
-  enabled: false
+  enabled: true
   image: { repository: swiftbets-identity }
   env:
     Identity__Issuer: http://identity:8080
-    Identity__SeedDemoUsers: "false"
+    Identity__SeedDemoUsers: "true"
+    Identity__LoadTestUserCount: "100"
     Jwt__Authority: http://identity:8080
   secretEnv:
     ConnectionStrings__SbIdentity: { key: sb-identity }
+    Identity__DemoPassword: { key: demo-password }
     Identity__Clients__payout: { key: payout-client-secret }
     Identity__Clients__steward: { key: steward-client-secret }
     Identity__SigningKeyPem: { key: identity-signing-key }
@@ -115,7 +116,7 @@ payout:
   env:
     Kafka__ClientId: swiftbets-payout
     Wallet__GrpcAddress: http://wallet:8081
-    ServiceIdentity__TokenEndpoint: http://placement:8080/auth/token
+    ServiceIdentity__TokenEndpoint: http://identity:8080/auth/token
     ServiceIdentity__ClientId: payout
   secretEnv:
     ConnectionStrings__SbPayout: { key: sb-payout }
@@ -130,7 +131,7 @@ steward:
   image: { repository: swiftbets-steward }
   env:
     Kafka__ClientId: swiftbets-steward
-    ServiceIdentity__TokenEndpoint: http://placement:8080/auth/token
+    ServiceIdentity__TokenEndpoint: http://identity:8080/auth/token
     ServiceIdentity__ClientId: steward
     Platform__SettlementAddress: http://settlement:8080
     Platform__PayoutAddress: http://payout:8080
@@ -163,7 +164,8 @@ gateway:
   image: { repository: swiftbets-gateway }
   env:
     ConnectionStrings__Redis: redis:6379
-    Gateway__IdentityAddress: http://placement:8080
+    Gateway__IdentityAddress: http://identity:8080
+    ReverseProxy__Clusters__identity__Destinations__primary__Address: http://identity:8080
 
 dashboard:
   image: { repository: swiftbets-dashboard }
