@@ -61,6 +61,16 @@ jobs:
           for repo in $BUILD_REPOS; do services+=("${repo#swiftbets-}" "${repo#swiftbets-}-migrator"); done
           echo "building: ${services[*]}"
           $COMPOSE build "${services[@]}"
+      # SQL Server 2025 now and then dies at first start on hosted runners (errno 11); it comes up on a fresh try.
+      - name: Start SQL Server
+        run: |
+          for attempt in 1 2 3; do
+            $COMPOSE up -d --no-build --wait --wait-timeout 300 sqlserver && exit 0
+            echo "SQL Server failed to start (attempt $attempt); recreating"
+            $COMPOSE rm -fsv sqlserver
+            docker volume rm -f "$($COMPOSE config --format json | jq -r .name)_sqlserver" || true
+          done
+          exit 1
       - name: Start the stack
         run: $COMPOSE up -d --no-build --wait --wait-timeout 900
       - name: Gate E1 (accounts and sessions)
