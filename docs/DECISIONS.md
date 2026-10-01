@@ -549,3 +549,34 @@ A non-idempotent call is retried only when it carries an idempotency key.
 - `IKycProvider` keeps the provider swappable; the sandbox accepts well-formed SA ID numbers (Luhn) and passports, and rejects numbers ending in 0000 so tests can drive both outcomes.
 - Only the document type and last four characters are stored.
 - KYC status travels in the compacted snapshot; payments (E3) refuse withdrawals unless it is verified.
+
+**D118. A customer holds one wallet account per currency; the first keeps the user id as its account id.**
+- Placement and payout address accounts by user id today. Keeping that id for the first account (`0007_currency_accounts` maps every existing account to (user, its currency)) means neither changes in E3. Betting in a second currency is a later step.
+- House and funding accounts exist per supported currency (ZAR, USD), so every posting stays within one currency.
+- Responsible-gambling limits are read per user and apply only to accounts in the limit's own currency; blocks apply to every account.
+- The bonus bucket exists as a column, a balance field and a reconciliation check. Nothing credits it until promotions arrive.
+
+**D119. Paystack in test mode is the real deposit provider; payouts go through the simulator in v1.**
+- Paystack supports ZAR, has a free test mode, and signs webhooks with HMAC-SHA512 of the body. CI never calls it: the adapter is tested against recorded responses.
+- Payouts need a contracted provider and a verified business. The simulated provider (its own host, with fault switches for duplicate, reordered, failed and withheld webhooks) stands in until then.
+- Providers that need an email get `<user id>@<configured domain>`; the customer's address never leaves the platform.
+
+**D120. A deposit is credited under a key fixed by its id, then completed only if it is still open.**
+- So a webhook delivered twice, late or out of order credits once. A crash between the two steps is finished by the sweep, which asks the provider and applies the answer the same way.
+- A deposit the wallet refuses after payment (a limit or restriction) fails and is refunded at the provider. Payments does not pre-check limits; the wallet is the one place they are judged.
+- A provider success for a different amount is not credited; the daily reconciliation reports it.
+
+**D121. Withdrawals need a verified identity and a wallet hold; above a per-currency threshold an operator decides.**
+- KYC status comes from compliance's compacted snapshot (D117). Only a no-withdrawals restriction stops a withdrawal at the wallet; an excluded customer can always take their money out.
+- Thresholds: R5 000 and $300. A rejection returns the hold at once.
+- The status changes before the wallet is told, and `HoldSettled` records that it was told, so the sweep finishes any step a crash interrupted.
+
+**D122. Reconciliation is daily per provider, SA calendar day, tolerant of midnight; drift opens a Steward incident.**
+- A reference only one side lists for the day is looked up on the other side before it counts, so a payment that settles either side of midnight is not drift.
+- Drifts are stored, exported as `swiftbets_payments_reconciliation_drifts` (alert `PaymentsReconciliationDrift`), and published as `payments.drift-detected.v1`. Steward opens one `PaymentDrift` incident per provider and day, with the `payment-drift` runbook; remediation stays manual.
+- `SbPayments` is the seventh free-offer database (D115).
+
+**D123. The site hands deposits to the provider's hosted checkout; the console decides held withdrawals.**
+- The deposit form posts to the site, which redirects to the provider's checkout. The site's CSP `form-action` lists those origins from `CHECKOUT_ORIGINS` (default Paystack checkout; the simulator locally), so the redirect also works without JavaScript. Card details never touch SwiftBets.
+- Ops and Admin get `payments.read` and `payments.approve` (identity migration 0007). The console's Finance view shows the approval queue and the latest run per provider.
+- Local clusters request 20m CPU per service so the whole platform fits one kind node; production values are unchanged.

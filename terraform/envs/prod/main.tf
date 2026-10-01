@@ -18,7 +18,7 @@ provider "helm" {
 
 locals {
   install  = var.kubeconfig_path != ""
-  services = ["placement", "wallet", "settlement", "payout", "identity", "compliance"]
+  services = ["placement", "wallet", "settlement", "payout", "identity", "compliance", "payments"]
 }
 
 module "oci" {
@@ -44,7 +44,7 @@ resource "random_password" "db" {
 }
 
 resource "random_password" "client" {
-  for_each = toset(["payout", "steward", "demo"])
+  for_each = toset(["payout", "steward", "demo", "payments", "payments-simulator", "payments-webhook"])
   length   = 32
   special  = false
 }
@@ -71,19 +71,22 @@ resource "kubernetes_secret_v1" "swiftbets" {
   }
   data = merge(
     {
-      "demo-password"             = random_password.client["demo"].result
-      "sqlserver-sa-password"     = module.azure_sql.admin_password
-      "postgres-password"         = random_password.db["postgres"].result
-      "payout-client-secret"      = random_password.client["payout"].result
-      "steward-client-secret"     = random_password.client["steward"].result
-      "steward-db-password"       = random_password.db["steward"].result
-      "history-db-password"       = random_password.db["history"].result
-      "notifications-db-password" = random_password.db["notifications"].result
-      "sb-steward"                = "Host=postgres;Database=sb_steward;Username=steward_app;Password=${random_password.db["steward"].result}"
-      "sb-history"                = "Host=postgres;Database=sb_history;Username=history_app;Password=${random_password.db["history"].result}"
-      "sb-notifications"          = "Host=postgres;Database=sb_notifications;Username=notifications_app;Password=${random_password.db["notifications"].result}"
-      "anthropic-api-key"         = var.anthropic_api_key
-      "identity-signing-key"      = tls_private_key.identity.private_key_pem
+      "demo-password"              = random_password.client["demo"].result
+      "sqlserver-sa-password"      = module.azure_sql.admin_password
+      "postgres-password"          = random_password.db["postgres"].result
+      "payout-client-secret"       = random_password.client["payout"].result
+      "steward-client-secret"      = random_password.client["steward"].result
+      "payments-client-secret"     = random_password.client["payments"].result
+      "payments-simulator-api-key" = random_password.client["payments-simulator"].result
+      "payments-webhook-secret"    = random_password.client["payments-webhook"].result
+      "steward-db-password"        = random_password.db["steward"].result
+      "history-db-password"        = random_password.db["history"].result
+      "notifications-db-password"  = random_password.db["notifications"].result
+      "sb-steward"                 = "Host=postgres;Database=sb_steward;Username=steward_app;Password=${random_password.db["steward"].result}"
+      "sb-history"                 = "Host=postgres;Database=sb_history;Username=history_app;Password=${random_password.db["history"].result}"
+      "sb-notifications"           = "Host=postgres;Database=sb_notifications;Username=notifications_app;Password=${random_password.db["notifications"].result}"
+      "anthropic-api-key"          = var.anthropic_api_key
+      "identity-signing-key"       = tls_private_key.identity.private_key_pem
     },
     { for s in local.services : "${s}-db-password" => random_password.db[s].result },
     { for s in local.services : "sb-${s}" => "Server=tcp:${module.azure_sql.server_fqdn},1433;Database=Sb${title(s)};User Id=${s}_app;Password=${random_password.db[s].result};Encrypt=True;TrustServerCertificate=False" },

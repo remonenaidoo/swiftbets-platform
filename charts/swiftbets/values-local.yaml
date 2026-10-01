@@ -14,30 +14,65 @@ localSecrets:
     payout: Local-Dev-Payout-1
     identity: Local-Dev-Identity-1
     compliance: Local-Dev-Compliance-1
+    payments: Local-Dev-Payments-1
     steward: local-dev-steward
     history: local-dev-history
     notifications: local-dev-notifications
   clientSecrets:
     payout: local-dev-payout-client-secret
     steward: local-dev-steward-client-secret
+    payments: local-dev-payments-client-secret
+  paymentsSimulatorApiKey: local-dev-simulator-key
+  paymentsWebhookSecret: local-dev-simulator-webhook-secret
 infra:
   sqlserver:
     enabled: true
   mailpit:
     enabled: true
 notifications:
+  resources: { requests: { cpu: 20m } }
   env:
     Email__SmtpHost: mailpit
     Email__SmtpPort: "1025"
 settlement:
+  resources: { requests: { cpu: 20m } }
   env: { FaultInjection__Enabled: "true" }
 payout:
+  resources: { requests: { cpu: 20m } }
   env: { FaultInjection__Enabled: "true" }
 wallet:
+  resources: { requests: { cpu: 20m } }
   env: { FaultInjection__Enabled: "true" }
 # Local clusters are load-tested (k6 signs in 100 users); production keeps the gateway's strict defaults.
 gateway:
+  resources: { requests: { cpu: 20m } }
   env:
     Gateway__RateLimits__LoginPerMinute: "600"
     Gateway__RateLimits__PlacementsPerUserPerMinute: "20000"
     Gateway__RateLimits__RequestsPerIpPerMinute: "200000"
+
+# One kind node runs the whole platform, so services ask for a sliver of CPU and burst as needed.
+offer:
+  resources: { requests: { cpu: 20m } }
+placement:
+  resources: { requests: { cpu: 20m } }
+identity:
+  resources: { requests: { cpu: 20m } }
+compliance:
+  resources: { requests: { cpu: 20m } }
+payments:
+  resources: { requests: { cpu: 20m } }
+payments-simulator:
+  resources: { requests: { cpu: 20m } }
+steward:
+  resources: { requests: { cpu: 20m } }
+realtime:
+  resources: { requests: { cpu: 20m } }
+risk:
+  resources: { requests: { cpu: 20m } }
+site:
+  resources: { requests: { cpu: 20m } }
+  env:
+    CHECKOUT_ORIGINS: http://127.0.0.1:7140
+dashboard:
+  resources: { requests: { cpu: 20m } }
