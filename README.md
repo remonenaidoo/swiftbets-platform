@@ -11,7 +11,9 @@ SwiftBets is a soccer-first sports betting platform built as a production-grade 
 | [swiftbets-contracts](https://github.com/remonenaidoo/swiftbets-contracts) | Versioned event records, error envelope, wallet gRPC proto, generated TS types |
 | [swiftbets-building-blocks](https://github.com/remonenaidoo/swiftbets-building-blocks) | Resilience, Kafka consumer host, outbox, persistence, observability, web |
 | [swiftbets-offer](https://github.com/remonenaidoo/swiftbets-offer) | Historical fixture replay, offer store, read API |
-| [swiftbets-placement](https://github.com/remonenaidoo/swiftbets-placement) | Placement saga and risk limits; until their own repos exist, also the wallet ledger (gRPC) and the identity service |
+| [swiftbets-placement](https://github.com/remonenaidoo/swiftbets-placement) | Placement saga, risk limits and bet history |
+| [swiftbets-wallet](https://github.com/remonenaidoo/swiftbets-wallet) | Double-entry ledger (gRPC), balances, daily reconciliation |
+| [swiftbets-identity](https://github.com/remonenaidoo/swiftbets-identity) | Accounts, registration, verification, reset, account status, RS256 tokens and JWKS |
 | [swiftbets-settlement](https://github.com/remonenaidoo/swiftbets-settlement) | Evaluate → settle, Lua counters, reconciler, inbound DLQ |
 | [swiftbets-payout](https://github.com/remonenaidoo/swiftbets-payout) | Delta payouts, named-step retry ladder, dead-letter |
 | [swiftbets-steward](https://github.com/remonenaidoo/swiftbets-steward) | Detectors, tool-calling agent, runbook RAG, approvals |

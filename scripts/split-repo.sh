@@ -8,7 +8,7 @@ set -euo pipefail
 source_repo="${1:?source repo}"
 target="${2:?target dir}"
 solution="${3:?solution name}"
-images="${4:?images json, e.g. [{\"name\": \"x\", \"dockerfile\": \"deploy/X.Dockerfile\"}]}"
+images="${4:?images json (a JSON array of name and dockerfile objects)}"
 shift 4
 (($# > 0)) || { echo "give at least one path to keep" >&2; exit 2; }
 command -v git-filter-repo >/dev/null || { echo "git-filter-repo is required (pip install git-filter-repo)" >&2; exit 2; }
