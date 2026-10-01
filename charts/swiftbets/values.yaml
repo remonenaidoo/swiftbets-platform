@@ -1,0 +1,152 @@
+# Shared by every environment. values-local.yaml and values-cloud.yaml layer on top.
+global:
+  imageRegistry: ghcr.io/remonenaidoo
+  imageTag: main
+  secretName: swiftbets-secrets
+  env:
+    Kafka__BootstrapServers: redpanda:9093
+    Kafka__Environment: dev
+    Jwt__Authority: http://placement:8080
+    Jwt__RequireHttpsMetadata: "false"
+    FaultInjection__Enabled: "false"
+
+# A Secret with demo passwords and connection strings, for local clusters only. Cloud installs create
+# swiftbets-secrets out of band (Terraform writes it from the Azure SQL outputs), and leave this off.
+localSecrets:
+  enabled: false
+
+ingress:
+  enabled: false
+  className: ""
+  host: ""
+
+infra:
+  enabled: true
+  secretName: swiftbets-secrets
+
+offer:
+  image: { repository: swiftbets-offer }
+  env:
+    Kafka__ClientId: swiftbets-offer
+    ConnectionStrings__Redis: redis:6379
+
+placement:
+  image: { repository: swiftbets-placement }
+  resources:
+    requests: { cpu: 250m, memory: 256Mi }
+    limits: { memory: 768Mi }
+  env:
+    Kafka__ClientId: swiftbets-placement
+    ConnectionStrings__Redis: redis:6379
+    Identity__Issuer: http://placement:8080
+    Identity__SeedDemoUsers: "true"
+    Identity__LoadTestUserCount: "100"
+    Wallet__GrpcAddress: http://wallet:8081
+  secretEnv:
+    ConnectionStrings__SbPlacement: { key: sb-placement }
+    ConnectionStrings__SbHistory: { key: sb-history }
+    Identity__DemoPassword: { key: demo-password }
+    Identity__Clients__payout: { key: payout-client-secret }
+    Identity__Clients__steward: { key: steward-client-secret }
+    # One stable RS256 key for every replica and restart; without it each pod signs with its own throwaway key.
+    Identity__SigningKeyPem: { key: identity-signing-key }
+  migrators:
+    - name: placement-migrator
+      image: { repository: swiftbets-placement-migrator }
+      env: { Migrator__AppLogin: placement_app, Migrator__EnsureDatabase: "true" }
+      secretEnv: { ConnectionStrings__SbPlacement: { key: sb-placement-migrate } }
+    - name: history-migrator
+      image: { repository: swiftbets-history-migrator }
+      secretEnv: { ConnectionStrings__SbHistory: { key: sb-history } }
+
+wallet:
+  image: { repository: swiftbets-wallet }
+  grpcPort: 8081
+  resources:
+    requests: { cpu: 250m, memory: 256Mi }
+    limits: { memory: 768Mi }
+  env:
+    Kafka__ClientId: swiftbets-wallet
+  secretEnv:
+    ConnectionStrings__SbWallet: { key: sb-wallet }
+  migrators:
+    - name: wallet-migrator
+      image: { repository: swiftbets-wallet-migrator }
+      env: { Migrator__AppLogin: wallet_app, Migrator__EnsureDatabase: "true" }
+      secretEnv: { ConnectionStrings__SbWallet: { key: sb-wallet-migrate } }
+
+settlement:
+  image: { repository: swiftbets-settlement }
+  env:
+    Kafka__ClientId: swiftbets-settlement
+    ConnectionStrings__Redis: redis:6379
+  secretEnv:
+    ConnectionStrings__SbSettlement: { key: sb-settlement }
+  migrators:
+    - name: settlement-migrator
+      image: { repository: swiftbets-settlement-migrator }
+      env: { Migrator__AppLogin: settlement_app, Migrator__EnsureDatabase: "true" }
+      secretEnv: { ConnectionStrings__SbSettlement: { key: sb-settlement-migrate } }
+
+payout:
+  image: { repository: swiftbets-payout }
+  env:
+    Kafka__ClientId: swiftbets-payout
+    Wallet__GrpcAddress: http://wallet:8081
+    ServiceIdentity__TokenEndpoint: http://placement:8080/auth/token
+    ServiceIdentity__ClientId: payout
+  secretEnv:
+    ConnectionStrings__SbPayout: { key: sb-payout }
+    ServiceIdentity__ClientSecret: { key: payout-client-secret }
+  migrators:
+    - name: payout-migrator
+      image: { repository: swiftbets-payout-migrator }
+      env: { Migrator__AppLogin: payout_app, Migrator__EnsureDatabase: "true" }
+      secretEnv: { ConnectionStrings__SbPayout: { key: sb-payout-migrate } }
+
+steward:
+  image: { repository: swiftbets-steward }
+  env:
+    Kafka__ClientId: swiftbets-steward
+    ServiceIdentity__TokenEndpoint: http://placement:8080/auth/token
+    ServiceIdentity__ClientId: steward
+    Platform__SettlementAddress: http://settlement:8080
+    Platform__PayoutAddress: http://payout:8080
+    Platform__OfferAddress: http://offer:8080
+    Platform__WalletAddress: http://wallet:8080
+    Platform__PrometheusAddress: http://prometheus:9090
+    Steward__ModelProvider__Provider: replay
+    Steward__ModelProvider__ReplayDirectory: /app/transcripts
+    Steward__Embeddings__Provider: hashing
+  secretEnv:
+    ConnectionStrings__SbSteward: { key: sb-steward }
+    ServiceIdentity__ClientSecret: { key: steward-client-secret }
+  migrators:
+    - name: steward-migrator
+      image: { repository: swiftbets-steward-migrator }
+      secretEnv: { ConnectionStrings__SbSteward: { key: sb-steward } }
+
+realtime:
+  image: { repository: swiftbets-realtime }
+  env:
+    Kafka__ClientId: swiftbets-realtime
+    ConnectionStrings__Redis: redis:6379
+
+risk:
+  image: { repository: swiftbets-risk }
+  env:
+    Kafka__ClientId: swiftbets-risk
+
+gateway:
+  image: { repository: swiftbets-gateway }
+  env:
+    ConnectionStrings__Redis: redis:6379
+    Gateway__IdentityAddress: http://placement:8080
+
+dashboard:
+  image: { repository: swiftbets-dashboard }
+  health: { live: /healthz, ready: /healthz }
+  readOnlyRootFilesystem: false
+  resources:
+    requests: { cpu: 20m, memory: 32Mi }
+    limits: { memory: 128Mi }

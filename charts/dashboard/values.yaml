@@ -1,0 +1,10 @@
+# Defaults only; the umbrella chart (charts/swiftbets) supplies the environment.
+image:
+  repository: swiftbets-dashboard
+autoscaling:
+  enabled: false
+pdb:
+  enabled: false
+resources:
+  requests: { cpu: 100m, memory: 192Mi }
+  limits: { memory: 512Mi }

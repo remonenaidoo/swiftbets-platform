@@ -1,0 +1,5 @@
+# Copy to backend.hcl (gitignored). Credentials come from AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY, which are an
+# OCI "Customer Secret Key" pair, not AWS keys.
+bucket    = "swiftbets-tfstate"
+region    = "af-johannesburg-1"
+endpoints = { s3 = "https://<namespace>.compat.objectstorage.af-johannesburg-1.oraclecloud.com" }

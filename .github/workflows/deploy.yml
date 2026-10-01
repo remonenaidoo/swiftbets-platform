@@ -1,0 +1,57 @@
+name: deploy
+
+# Merging to main deploys the platform to the cloud cluster through the protected `cloud` environment, which
+# requires an approval. Service repos publish :main images on their own merges; a run here (manual or on
+# a platform merge) rolls the cluster onto them.
+on:
+  push:
+    branches: [main]
+    paths: ['charts/**', '.github/workflows/deploy.yml']
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: Image tag every service runs
+        default: main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-cloud
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: cloud
+    timeout-minutes: 30
+    env:
+      KUBECONFIG_DATA: ${{ secrets.KUBECONFIG }}
+    steps:
+      - name: Cluster configured?
+        id: cluster
+        run: |
+          if [ -z "$KUBECONFIG_DATA" ]; then
+            echo "::notice::No KUBECONFIG secret on the cloud environment yet; provision with terraform/envs/cloud first."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v7
+        if: steps.cluster.outputs.ready == 'true'
+      - uses: azure/setup-helm@v4
+        if: steps.cluster.outputs.ready == 'true'
+      - name: Deploy
+        if: steps.cluster.outputs.ready == 'true'
+        env:
+          IMAGE_TAG: ${{ inputs.image_tag || 'main' }}
+        run: |
+          echo "$KUBECONFIG_DATA" > "$RUNNER_TEMP/kubeconfig"
+          export KUBECONFIG="$RUNNER_TEMP/kubeconfig"
+          scripts/helm-deps.sh
+          helm upgrade --install swiftbets charts/swiftbets -n swiftbets \
+            -f charts/swiftbets/values-cloud.yaml --reuse-values \
+            --set global.imageTag="$IMAGE_TAG" --wait --timeout 20m
+          # :main is a moving tag; restart so every pod pulls the image that tag points at now.
+          kubectl -n swiftbets rollout restart deployment
+          kubectl -n swiftbets rollout status deployment --timeout 10m

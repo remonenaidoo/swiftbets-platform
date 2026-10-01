@@ -368,3 +368,33 @@ A non-idempotent call is retried only when it carries an idempotency key.
 
 **D76. Every .NET repo pins shared packages transitively.**
 - Projects that reach contracts only through building-blocks resolved a different version and failed restore on CI (NU1603).
+
+**D77. Charts: one library, one thin chart per service, an infra chart and an umbrella.**
+- The library renders the Deployment, Service, probes, HPA, PDB and migration Jobs from values.
+- The library also applies the non-root, read-only-capabilities defaults.
+- Each Service is named after its chart, so in-cluster addresses match compose (`http://placement:8080`).
+
+**D78. Migrations run as revisioned Jobs, not Helm hooks.**
+- Locally the databases live in the same release, and a pre-install hook would run before they exist.
+- Each Job is named `<migrator>-r<revision>` and retries until its database answers.
+- Services stay unready until their schema exists.
+
+**D79. Redpanda comes from its official chart.**
+- It runs as one broker with TLS, SASL and external access off, and topic auto-creation stays disabled.
+- The compose topic script runs as a Job against it.
+- Compose's init scripts are copied into the infra chart; `scripts/sync-chart-files.sh --check` fails CI on drift.
+
+**D80. Cloud Terraform runs in two applies.**
+- The first creates the OCI VM with k3s and Azure SQL. The firewall allows only the node's IP, and each database uses the free offer through azapi, because azurerm has no flag for it.
+- The second, once the kubeconfig exists, writes `swiftbets-secrets` and installs the chart.
+- State lives in OCI Object Storage over its S3 API.
+
+**D81. The identity signing key is a managed secret.**
+- Without one, each placement pod signed with a throwaway key: a restart, or a second replica, invalidated every token. Production refused to start at all.
+- Local installs generate the key once and keep it across upgrades (`lookup`). The cloud key comes from Terraform's `tls_private_key`.
+
+**D82. Images carry a moving `main` tag, and deploys need an approval.**
+- `deploy.yml` targets the `cloud` environment, which requires a reviewer and accepts only `main`.
+- `:main` pulls are `Always` in the cloud, and the deploy restarts deployments onto the current image.
+- kind CI installs the full chart on every platform change.
+- Measured on single-node kind: 1,274 placements, all accepted, with p99 327 ms through a port-forward.

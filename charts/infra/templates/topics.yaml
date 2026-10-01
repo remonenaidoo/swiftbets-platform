@@ -1,0 +1,38 @@
+{{- if .Values.topics.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: redpanda-topics
+  labels: {{- include "infra.labels" . | nindent 4 }}
+data:
+  provision-topics.sh: |
+{{ .Files.Get "files/provision-topics.sh" | indent 4 }}
+  topics.yaml: |
+{{ .Files.Get "files/topics.yaml" | indent 4 }}
+---
+# Topics are declared, never auto-created: this Job creates or aligns every one, idempotently, on each release.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: topics-r{{ .Release.Revision }}
+  labels: {{- include "infra.labels" . | nindent 4 }}
+spec:
+  backoffLimit: 40
+  ttlSecondsAfterFinished: 3600
+  template:
+    spec:
+      restartPolicy: OnFailure
+      automountServiceAccountToken: false
+      containers:
+        - name: topics
+          image: {{ .Values.topics.image }}
+          command: ["/bin/bash", "/topics/provision-topics.sh", "/topics/topics.yaml"]
+          env:
+            - { name: SWIFTBETS_ENV, value: {{ .Values.kafkaEnvironment | quote }} }
+            - { name: REDPANDA_BROKERS, value: {{ .Values.topics.brokers | quote }} }
+            - { name: REDPANDA_ADMIN, value: {{ .Values.topics.admin | quote }} }
+          volumeMounts: [{ name: topics, mountPath: /topics, readOnly: true }]
+      volumes:
+        - name: topics
+          configMap: { name: redpanda-topics }
+{{- end }}

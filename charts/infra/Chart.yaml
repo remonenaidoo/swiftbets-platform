@@ -1,0 +1,10 @@
+apiVersion: v2
+name: infra
+description: Stateful dependencies for SwiftBets - Postgres with pgvector, Redis, SQL Server (local only) and Redpanda (official chart), plus their init jobs.
+type: application
+version: 0.1.0
+dependencies:
+  - name: redpanda
+    version: 26.1.x
+    repository: https://charts.redpanda.com
+    condition: redpandaEnabled

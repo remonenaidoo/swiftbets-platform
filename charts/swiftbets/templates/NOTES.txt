@@ -1,0 +1,7 @@
+SwiftBets is installing into namespace {{ .Release.Namespace }}.
+
+Watch it come up:   kubectl -n {{ .Release.Namespace }} get pods -w
+Open the dashboard: kubectl -n {{ .Release.Namespace }} port-forward svc/gateway 7100:8080   then http://127.0.0.1:7100
+{{- if .Values.localSecrets.enabled }}
+Demo sign-in:       operator1 / {{ .Values.localSecrets.demoPassword }}
+{{- end }}

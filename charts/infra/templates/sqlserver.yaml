@@ -1,0 +1,47 @@
+{{- if .Values.sqlserver.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: sqlserver
+  labels: {{- include "infra.labels" . | nindent 4 }}
+spec:
+  selector: { app.kubernetes.io/name: sqlserver }
+  ports: [{ name: tds, port: 1433 }]
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: sqlserver
+  labels: {{- include "infra.labels" . | nindent 4 }}
+spec:
+  serviceName: sqlserver
+  replicas: 1
+  selector:
+    matchLabels: { app.kubernetes.io/name: sqlserver }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: sqlserver, app.kubernetes.io/part-of: swiftbets }
+    spec:
+      automountServiceAccountToken: false
+      securityContext: { fsGroup: 10001 }
+      containers:
+        - name: sqlserver
+          image: {{ .Values.sqlserver.image }}
+          ports: [{ name: tds, containerPort: 1433 }]
+          env:
+            - { name: ACCEPT_EULA, value: "Y" }
+            - { name: MSSQL_PID, value: Developer }
+            - { name: MSSQL_MEMORY_LIMIT_MB, value: {{ .Values.sqlserver.memoryLimitMb | quote }} }
+            - name: MSSQL_SA_PASSWORD
+              valueFrom: { secretKeyRef: { name: {{ .Values.secretName }}, key: sqlserver-sa-password } }
+          readinessProbe:
+            tcpSocket: { port: tds }
+            periodSeconds: 5
+          resources: {{- toYaml .Values.sqlserver.resources | nindent 12 }}
+          volumeMounts: [{ name: data, mountPath: /var/opt/mssql }]
+  volumeClaimTemplates:
+    - metadata: { name: data }
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources: { requests: { storage: {{ .Values.sqlserver.storage }} } }
+{{- end }}

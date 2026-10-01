@@ -1,0 +1,21 @@
+apiVersion: v2
+name: swiftbets
+description: The whole SwiftBets platform - infra, services, gateway and dashboard - on any conformant Kubernetes cluster.
+type: application
+version: 0.1.0
+appVersion: main
+maintainers:
+  - name: Remone Naidoo
+    email: naidoo.remone@gmail.com
+dependencies:
+  - { name: infra, version: 0.1.0, repository: file://../infra, condition: infra.enabled }
+  - { name: offer, version: 0.1.0, repository: file://../offer }
+  - { name: placement, version: 0.1.0, repository: file://../placement }
+  - { name: wallet, version: 0.1.0, repository: file://../wallet }
+  - { name: settlement, version: 0.1.0, repository: file://../settlement }
+  - { name: payout, version: 0.1.0, repository: file://../payout }
+  - { name: steward, version: 0.1.0, repository: file://../steward }
+  - { name: realtime, version: 0.1.0, repository: file://../realtime }
+  - { name: risk, version: 0.1.0, repository: file://../risk }
+  - { name: gateway, version: 0.1.0, repository: file://../gateway }
+  - { name: dashboard, version: 0.1.0, repository: file://../dashboard }

@@ -1,0 +1,8 @@
+apiVersion: v2
+name: swiftbets-service
+description: Library chart every SwiftBets service renders through - Deployment, Service, config, HPA, PDB and its migration Job.
+type: library
+version: 0.1.0
+maintainers:
+  - name: Remone Naidoo
+    email: naidoo.remone@gmail.com

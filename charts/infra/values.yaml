@@ -1,0 +1,75 @@
+# Secret holding every password below (see the umbrella chart's localSecrets for the local one).
+secretName: swiftbets-secrets
+kafkaEnvironment: dev
+
+postgres:
+  enabled: true
+  image: pgvector/pgvector:0.8.6-pg17-trixie
+  storage: 5Gi
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { memory: 1Gi }
+
+redis:
+  enabled: true
+  image: redis:8.6-alpine
+  storage: 1Gi
+  resources:
+    requests: { cpu: 50m, memory: 64Mi }
+    limits: { memory: 256Mi }
+
+# In-cluster SQL Server is for local installs only. It has no arm64 image; the cloud uses Azure SQL (D31).
+sqlserver:
+  enabled: false
+  image: mcr.microsoft.com/mssql/server:2025-CU9-ubuntu-24.04
+  storage: 10Gi
+  memoryLimitMb: 1536
+  # Login used by the login-creation job: sa in-cluster, the server admin on Azure SQL.
+  adminLogin: sa
+  # Set to an external server (Azure SQL) to create the service logins there instead.
+  external:
+    host: ""
+  resources:
+    requests: { cpu: 250m, memory: 1Gi }
+    limits: { memory: 2Gi }
+
+topics:
+  enabled: true
+  image: docker.redpanda.com/redpandadata/redpanda:v26.1.18
+  brokers: redpanda:9093
+  admin: redpanda:9644
+
+# The official Redpanda chart; its schema forbids extra keys, so the switch lives outside it.
+redpandaEnabled: true
+
+redpanda:
+  fullnameOverride: redpanda
+  image:
+    tag: v26.1.18
+  statefulset:
+    replicas: 1
+  tls:
+    enabled: false
+  external:
+    enabled: false
+  auth:
+    sasl:
+      enabled: false
+  console:
+    enabled: false
+  monitoring:
+    enabled: false
+  resources:
+    cpu:
+      cores: 1
+      overprovisioned: true
+    memory:
+      container:
+        max: 2Gi
+  storage:
+    persistentVolume:
+      enabled: true
+      size: 5Gi
+  config:
+    cluster:
+      auto_create_topics_enabled: false

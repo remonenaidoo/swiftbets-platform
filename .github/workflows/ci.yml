@@ -23,5 +23,62 @@ jobs:
         run: |
           bash <(curl -sSfL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
           ./actionlint -color
+      - name: Chart copies of the compose init scripts are in sync
+        run: scripts/sync-chart-files.sh --check
       - name: Grafana dashboards are valid JSON
         run: for f in compose/grafana/dashboards/*.json; do python3 -m json.tool "$f" > /dev/null; done
+
+  charts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: azure/setup-helm@v4
+      - name: Build chart dependencies
+        run: scripts/helm-deps.sh
+      - name: Lint (local and cloud values)
+        run: |
+          helm lint charts/swiftbets -f charts/swiftbets/values-local.yaml
+          helm lint charts/swiftbets -f charts/swiftbets/values-cloud.yaml
+
+  kind-install:
+    needs: charts
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+      - uses: azure/setup-helm@v4
+      - uses: helm/kind-action@v1
+        with:
+          config: deploy/kind/cluster.yaml
+          cluster_name: swiftbets
+      - name: Install the umbrella chart
+        run: |
+          scripts/helm-deps.sh
+          helm upgrade --install swiftbets charts/swiftbets -n swiftbets --create-namespace \
+            -f charts/swiftbets/values-local.yaml --wait --timeout 25m
+      - name: Smoke test through the gateway
+        run: |
+          kubectl -n swiftbets port-forward svc/gateway 7100:8080 &
+          sleep 5
+          curl -fsS -X POST http://127.0.0.1:7100/api/session/login -H 'Content-Type: application/json' \
+            -H 'X-SwiftBets-Csrf: 1' -d '{"username":"operator1","password":"Local-Dev-Demo-1"}'
+          curl -fsS http://127.0.0.1:7100/api/fixtures/?limit=1 | head -c 300
+      - name: Diagnostics
+        if: failure()
+        run: |
+          kubectl -n swiftbets get pods -o wide
+          kubectl -n swiftbets get events --sort-by=.lastTimestamp | tail -40
+
+  terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: hashicorp/setup-terraform@v3
+      - name: Format
+        run: terraform fmt -check -recursive terraform
+      - name: Validate
+        run: |
+          for dir in terraform/modules/oci terraform/modules/azure-sql terraform/envs/cloud; do
+            terraform -chdir="$dir" init -backend=false -input=false >/dev/null
+            terraform -chdir="$dir" validate
+          done

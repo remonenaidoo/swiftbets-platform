@@ -1,0 +1,34 @@
+# Any local cluster (kind, k3d, k3s, Docker Desktop): everything in-cluster, including SQL Server, with demo secrets.
+global:
+  env:
+    ASPNETCORE_ENVIRONMENT: Development
+localSecrets:
+  enabled: true
+  demoPassword: Local-Dev-Demo-1
+  sqlServerSaPassword: Local-Dev-Sa-Pass-1
+  postgresPassword: local-dev-postgres
+  dbPasswords:
+    placement: Local-Dev-Placement-1
+    wallet: Local-Dev-Wallet-1
+    settlement: Local-Dev-Settlement-1
+    payout: Local-Dev-Payout-1
+    steward: local-dev-steward
+    history: local-dev-history
+  clientSecrets:
+    payout: local-dev-payout-client-secret
+    steward: local-dev-steward-client-secret
+infra:
+  sqlserver:
+    enabled: true
+settlement:
+  env: { FaultInjection__Enabled: "true" }
+payout:
+  env: { FaultInjection__Enabled: "true" }
+wallet:
+  env: { FaultInjection__Enabled: "true" }
+# Local clusters are load-tested (k6 signs in 100 users); production keeps the gateway's strict defaults.
+gateway:
+  env:
+    Gateway__RateLimits__LoginPerMinute: "600"
+    Gateway__RateLimits__PlacementsPerUserPerMinute: "20000"
+    Gateway__RateLimits__RequestsPerIpPerMinute: "200000"

@@ -1,0 +1,10 @@
+#cloud-config
+# Installs single-node k3s. The node's public IP is added to the API certificate so kubectl works remotely.
+package_update: true
+packages: [curl]
+runcmd:
+  # Oracle's Ubuntu images ship an iptables REJECT rule that blocks everything but SSH; open 80, 443 and 6443.
+  - iptables -I INPUT -p tcp -m multiport --dports 80,443,6443 -j ACCEPT
+  - netfilter-persistent save || true
+  - PUBLIC_IP=$(curl -s https://ifconfig.me)
+  - curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION='${k3s_version}' sh -s - server --tls-san "$PUBLIC_IP" --write-kubeconfig-mode 0640

@@ -6,3 +6,10 @@ compose/.env
 node_modules/
 dist/
 .DS_Store
+charts/*/charts/
+charts/*/Chart.lock
+terraform/**/.terraform/
+terraform/**/.terraform.lock.hcl
+terraform/**/*.tfstate*
+terraform/**/backend.hcl
+kubeconfig*

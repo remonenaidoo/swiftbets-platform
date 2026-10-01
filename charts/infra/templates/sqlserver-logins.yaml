@@ -1,0 +1,40 @@
+{{- $host := .Values.sqlserver.external.host | default (ternary "sqlserver" "" .Values.sqlserver.enabled) }}
+{{- if $host }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sqlserver-logins
+  labels: {{- include "infra.labels" . | nindent 4 }}
+data:
+  init.sql: |
+{{ .Files.Get "files/sqlserver-init.sql" | indent 4 }}
+---
+# Creates the per-service logins; migrators then map each login into its own database only.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: sqlserver-logins-r{{ .Release.Revision }}
+  labels: {{- include "infra.labels" . | nindent 4 }}
+spec:
+  backoffLimit: 40
+  ttlSecondsAfterFinished: 3600
+  template:
+    spec:
+      restartPolicy: OnFailure
+      automountServiceAccountToken: false
+      containers:
+        - name: init
+          image: {{ .Values.sqlserver.image }}
+          command: ["/opt/mssql-tools18/bin/sqlcmd", "-C", "-S", {{ $host | quote }}, "-U", {{ .Values.sqlserver.adminLogin | quote }}, "-b", "-i", "/init/init.sql"]
+          env:
+            - name: SQLCMDPASSWORD
+              valueFrom: { secretKeyRef: { name: {{ .Values.secretName }}, key: sqlserver-sa-password } }
+            {{- range $svc := list "placement" "wallet" "settlement" "payout" }}
+            - name: {{ upper $svc }}_DB_PASSWORD
+              valueFrom: { secretKeyRef: { name: {{ $.Values.secretName }}, key: {{ $svc }}-db-password } }
+            {{- end }}
+          volumeMounts: [{ name: init, mountPath: /init, readOnly: true }]
+      volumes:
+        - name: init
+          configMap: { name: sqlserver-logins }
+{{- end }}

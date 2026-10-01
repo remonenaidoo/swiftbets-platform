@@ -1,0 +1,63 @@
+# Explicit topic catalogue; auto-creation is disabled on the broker. Names get the environment suffix at provision time.
+defaults:
+  partitions: 3
+  retention.ms: 604800000
+topics:
+  - name: swiftbets.offer.fixture-changed.v1
+    config: { cleanup.policy: compact }
+  - name: swiftbets.offer.price-changed.v1
+    partitions: 6
+  - name: swiftbets.offer.result-published.v1
+    partitions: 6
+  - name: swiftbets.offer.result-published.v1.dlq
+    retention.ms: 2592000000
+  - name: swiftbets.placement.coupon-placed.v1
+    partitions: 6
+  - name: swiftbets.placement.coupon-placed.v1.dlq
+    retention.ms: 2592000000
+  - name: swiftbets.placement.coupon-rejected.v1
+  - name: swiftbets.wallet.ledger-posted.v1
+    partitions: 6
+  - name: swiftbets.settlement.leg-evaluated.v1
+    partitions: 6
+  - name: swiftbets.settlement.leg-evaluated.v1.dlq
+    retention.ms: 2592000000
+  - name: swiftbets.settlement.coupon-settled.v1
+    partitions: 6
+  - name: swiftbets.settlement.coupon-settled.v1.dlq
+    retention.ms: 2592000000
+  - name: swiftbets.settlement.stuck-coupon.v1
+  - name: swiftbets.payout.retry-5s.v1
+  - name: swiftbets.payout.retry-5s.v1.dlq
+    retention.ms: 2592000000
+  - name: swiftbets.payout.retry-1m.v1
+  - name: swiftbets.payout.retry-1m.v1.dlq
+    retention.ms: 2592000000
+  - name: swiftbets.payout.retry-15m.v1
+  - name: swiftbets.payout.retry-15m.v1.dlq
+    retention.ms: 2592000000
+  - name: swiftbets.payout.dead-letter.v1
+    retention.ms: 2592000000
+  - name: swiftbets.payout.payout-completed.v1
+    partitions: 6
+  - name: swiftbets.steward.incident-raised.v1
+  - name: swiftbets.steward.incident-updated.v1
+  - name: swiftbets.steward.remediation-executed.v1
+  - name: swiftbets.risk.liability-changed.v1
+    partitions: 6
+  - name: swiftbets.risk.risk-alert.v1
+  # Dead-letter queues for the live-view consumers (realtime, steward)
+  - name: swiftbets.placement.coupon-rejected.v1.dlq
+    retention.ms: 2592000000
+  - name: swiftbets.payout.payout-completed.v1.dlq
+    retention.ms: 2592000000
+  - name: swiftbets.settlement.stuck-coupon.v1.dlq
+    retention.ms: 2592000000
+  - name: swiftbets.payout.dead-letter.v1.dlq
+    retention.ms: 2592000000
+  - name: swiftbets.steward.incident-raised.v1.dlq
+    retention.ms: 2592000000
+  - name: swiftbets.steward.incident-updated.v1.dlq
+    retention.ms: 2592000000
+  - name: swiftbets.steward.remediation-executed.v1.dlq
+    retention.ms: 2592000000
