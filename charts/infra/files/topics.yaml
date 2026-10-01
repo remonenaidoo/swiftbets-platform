@@ -63,3 +63,13 @@ topics:
     retention.ms: 2592000000
   - name: swiftbets.offer.fixture-changed.v1.dlq
     retention.ms: 2592000000
+  - name: swiftbets.identity.user-registered.v1
+  - name: swiftbets.identity.email-verified.v1
+  - name: swiftbets.identity.account-status-changed.v1
+  - name: swiftbets.identity.session-revoked.v1
+  - name: swiftbets.audit.audit-recorded.v1
+    partitions: 6
+    retention.ms: 2592000000
+  - name: swiftbets.notifications.notification-requested.v1
+  - name: swiftbets.notifications.notification-requested.v1.dlq
+    retention.ms: 2592000000
