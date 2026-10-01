@@ -1,0 +1,57 @@
+name: live-gate
+
+# The epic gates against the whole stack: every service from its :main image under docker compose on the runner,
+# then the gate scripts through the gateway. Any red step fails the run; an epic closes only on a green run here.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Image tag to run (main, or a release tag)
+        default: main
+  schedule:
+    - cron: '17 2 * * *'
+  pull_request:
+    paths:
+      - 'compose/**'
+      - 'scripts/gate-*.sh'
+      - '.github/workflows/live-gate.yml'
+
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: live-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      SWIFTBETS_TAG: ${{ inputs.tag || 'main' }}
+      COMPOSE: docker compose --project-directory compose -f compose/docker-compose.yml
+      GATEWAY: http://127.0.0.1:7100
+      MAILPIT: http://127.0.0.1:7125
+      SIMULATOR: http://127.0.0.1:7140
+    steps:
+      - uses: actions/checkout@v7
+      - name: Configure the stack
+        run: cp compose/.env.example compose/.env
+      - name: Pull images
+        run: $COMPOSE pull --quiet --ignore-buildable
+      - name: Start the stack
+        run: $COMPOSE up -d --no-build --wait --wait-timeout 900
+      - name: Gate E1 (accounts and sessions)
+        run: scripts/gate-e1.sh
+      - name: Gate E3 (payments)
+        run: scripts/gate-e3.sh
+      - name: Gate E4 (kill switch, system bets)
+        run: scripts/gate-e4.sh
+      - name: Diagnostics
+        if: failure()
+        run: |
+          $COMPOSE ps -a
+          for s in $($COMPOSE ps -a --format '{{.Service}}'); do
+            echo "::group::$s"; $COMPOSE logs --no-color --tail 80 "$s"; echo "::endgroup::"
+          done
