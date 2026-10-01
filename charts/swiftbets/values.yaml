@@ -179,6 +179,7 @@ gateway:
   image: { repository: swiftbets-gateway }
   env:
     ConnectionStrings__Redis: redis:6379
+    Kafka__ClientId: swiftbets-gateway
     Gateway__IdentityAddress: http://identity:8080
     ReverseProxy__Clusters__identity__Destinations__primary__Address: http://identity:8080
 

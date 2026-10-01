@@ -504,6 +504,9 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://tempo:4317
       FaultInjection__Enabled: "false"
       ConnectionStrings__Redis: redis:6379
+      Kafka__BootstrapServers: redpanda:9092
+      Kafka__Environment: ${SWIFTBETS_ENV:-dev}
+      Kafka__ClientId: swiftbets-gateway
       Gateway__IdentityAddress: http://identity:8080
       ReverseProxy__Clusters__identity__Destinations__primary__Address: http://identity:8080
       # Open preview: sign visitors in as this demo account automatically. Off when empty.
@@ -518,6 +521,7 @@ services:
     healthcheck: { <<: *dotnet-healthcheck, test: ["CMD", "dotnet", "/app/SwiftBets.Gateway.Api.dll", "--healthcheck"] }
     depends_on:
       redis: { condition: service_healthy }
+      topics: { condition: service_completed_successfully }
 
   web:
     image: ghcr.io/remonenaidoo/swiftbets-web:${SWIFTBETS_TAG:-local}
