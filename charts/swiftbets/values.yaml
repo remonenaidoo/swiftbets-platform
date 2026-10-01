@@ -42,7 +42,10 @@ placement:
     Identity__SeedDemoUsers: "true"
     Identity__LoadTestUserCount: "100"
     Wallet__GrpcAddress: http://wallet:8081
+    ServiceIdentity__TokenEndpoint: http://identity:8080/auth/token
+    ServiceIdentity__ClientId: placement
   secretEnv:
+    ServiceIdentity__ClientSecret: { key: placement-client-secret }
     ConnectionStrings__SbPlacement: { key: sb-placement }
     ConnectionStrings__SbHistory: { key: sb-history }
     Identity__DemoPassword: { key: demo-password }
@@ -76,6 +79,7 @@ identity:
     Identity__Clients__payout: { key: payout-client-secret }
     Identity__Clients__steward: { key: steward-client-secret }
     Identity__Clients__payments: { key: payments-client-secret }
+    Identity__Clients__placement: { key: placement-client-secret }
     Identity__SigningKeyPem: { key: identity-signing-key }
   migrators:
     - name: identity-migrator
