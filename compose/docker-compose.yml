@@ -240,6 +240,7 @@ services:
       Identity__Clients__payout: ${PAYOUT_CLIENT_SECRET:?set PAYOUT_CLIENT_SECRET in .env}
       Identity__Clients__steward: ${STEWARD_CLIENT_SECRET:?set STEWARD_CLIENT_SECRET in .env}
       Identity__Clients__payments: ${PAYMENTS_CLIENT_SECRET:?set PAYMENTS_CLIENT_SECRET in .env}
+      Identity__Clients__placement: ${PLACEMENT_CLIENT_SECRET:?set PLACEMENT_CLIENT_SECRET in .env}
       Kafka__ClientId: swiftbets-identity
       AccountEmail__Delivery: Notifications
       AccountEmail__PublicBaseUrl: ${PUBLIC_BASE_URL:-http://127.0.0.1:7100}
@@ -479,6 +480,9 @@ services:
       Identity__Clients__steward: ${STEWARD_CLIENT_SECRET:?set STEWARD_CLIENT_SECRET in .env}
       Identity__Clients__payments: ${PAYMENTS_CLIENT_SECRET:?set PAYMENTS_CLIENT_SECRET in .env}
       Wallet__GrpcAddress: http://wallet:8081
+      ServiceIdentity__TokenEndpoint: http://identity:8080/auth/token
+      ServiceIdentity__ClientId: placement
+      ServiceIdentity__ClientSecret: ${PLACEMENT_CLIENT_SECRET:?set PLACEMENT_CLIENT_SECRET in .env}
       ConnectionStrings__SbPlacement: Server=sqlserver,1433;Database=SbPlacement;User Id=placement_app;Password=${PLACEMENT_DB_PASSWORD};TrustServerCertificate=True
       ConnectionStrings__Redis: redis:6379
       ConnectionStrings__SbHistory: Host=postgres;Database=sb_history;Username=history_app;Password=${HISTORY_DB_PASSWORD}

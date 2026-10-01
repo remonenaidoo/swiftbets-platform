@@ -1,0 +1,88 @@
+name: live-gate
+
+# The epic gates against the whole stack: every service from its :main image under docker compose on the runner,
+# then the gate scripts through the gateway. Any red step fails the run; an epic closes only on a green run here.
+# Repos listed in `build` are built from their main branch instead, for images the registry does not have current.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Image tag to run (main, or a release tag)
+        default: main
+      build:
+        description: Space-separated repos to build from source instead of pulling
+        default: swiftbets-identity swiftbets-wallet
+  schedule:
+    - cron: '17 2 * * *'
+  pull_request:
+    paths:
+      - 'compose/**'
+      - 'scripts/gate-*.sh'
+      - '.github/workflows/live-gate.yml'
+
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: live-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      SWIFTBETS_TAG: ${{ inputs.tag || 'main' }}
+      BUILD_REPOS: ${{ inputs.build || 'swiftbets-identity swiftbets-wallet' }}
+      COMPOSE: docker compose --project-directory swiftbets-platform/compose -f swiftbets-platform/compose/docker-compose.yml
+      GATEWAY: http://127.0.0.1:7100
+      MAILPIT: http://127.0.0.1:7125
+      SIMULATOR: http://127.0.0.1:7140
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      # Compose build contexts are ../../<repo> from compose/, so every repo sits side by side in the workspace.
+      - uses: actions/checkout@v7
+        with: { path: swiftbets-platform }
+      - name: Check out repos built from source
+        run: |
+          for repo in $BUILD_REPOS; do
+            git clone --depth 1 "https://github.com/${GITHUB_REPOSITORY_OWNER}/$repo.git" "$repo"
+            swiftbets-platform/scripts/fetch-shared-packages.sh "$repo"
+          done
+      - name: Configure the stack
+        run: cp swiftbets-platform/compose/.env.example swiftbets-platform/compose/.env
+      - name: Pull images
+        run: $COMPOSE pull --quiet --ignore-pull-failures
+      - name: Build images from source
+        # Each repo builds its service and its migrator, named after the repo without the swiftbets- prefix.
+        run: |
+          services=()
+          for repo in $BUILD_REPOS; do services+=("${repo#swiftbets-}" "${repo#swiftbets-}-migrator"); done
+          echo "building: ${services[*]}"
+          $COMPOSE build "${services[@]}"
+      # SQL Server 2025 now and then dies at first start on hosted runners (errno 11); it comes up on a fresh try.
+      - name: Start SQL Server
+        run: |
+          for attempt in 1 2 3; do
+            $COMPOSE up -d --no-build --wait --wait-timeout 300 sqlserver && exit 0
+            echo "SQL Server failed to start (attempt $attempt); recreating"
+            $COMPOSE rm -fsv sqlserver
+            docker volume rm -f "$($COMPOSE config --format json | jq -r .name)_sqlserver" || true
+          done
+          exit 1
+      - name: Start the stack
+        run: $COMPOSE up -d --no-build --wait --wait-timeout 900
+      - name: Gate E1 (accounts and sessions)
+        run: swiftbets-platform/scripts/gate-e1.sh
+      - name: Gate E3 (payments)
+        run: swiftbets-platform/scripts/gate-e3.sh
+      - name: Gate E4 (kill switch, system bets)
+        run: swiftbets-platform/scripts/gate-e4.sh
+      - name: Diagnostics
+        if: failure()
+        run: |
+          $COMPOSE ps -a
+          for s in $($COMPOSE ps -a --format '{{.Service}}'); do
+            echo "::group::$s"; $COMPOSE logs --no-color --tail 80 "$s"; echo "::endgroup::"
+          done

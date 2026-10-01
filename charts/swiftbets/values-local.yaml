@@ -23,6 +23,7 @@ localSecrets:
     payout: local-dev-payout-client-secret
     steward: local-dev-steward-client-secret
     payments: local-dev-payments-client-secret
+    placement: local-dev-placement-client-secret
   paymentsSimulatorApiKey: local-dev-simulator-key
   paymentsWebhookSecret: local-dev-simulator-webhook-secret
 infra:
