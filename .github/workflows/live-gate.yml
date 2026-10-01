@@ -53,13 +53,14 @@ jobs:
       - name: Configure the stack
         run: cp swiftbets-platform/compose/.env.example swiftbets-platform/compose/.env
       - name: Pull images
-        run: $COMPOSE pull --quiet --ignore-buildable
+        run: $COMPOSE pull --quiet --ignore-pull-failures
       - name: Build images from source
+        # Each repo builds its service and its migrator, named after the repo without the swiftbets- prefix.
         run: |
-          services=$($COMPOSE config --format json | jq -r --arg repos " $BUILD_REPOS " \
-            '.services | to_entries[] | select(.value.build.context != null) | select($repos | contains(" " + (.value.build.context | split("/") | last) + " ")) | .key')
-          echo "building: $services"
-          [[ -z "$services" ]] || SWIFTBETS_TAG=$SWIFTBETS_TAG $COMPOSE build $services
+          services=()
+          for repo in $BUILD_REPOS; do services+=("${repo#swiftbets-}" "${repo#swiftbets-}-migrator"); done
+          echo "building: ${services[*]}"
+          $COMPOSE build "${services[@]}"
       - name: Start the stack
         run: $COMPOSE up -d --no-build --wait --wait-timeout 900
       - name: Gate E1 (accounts and sessions)
