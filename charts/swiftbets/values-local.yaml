@@ -22,6 +22,12 @@ localSecrets:
 infra:
   sqlserver:
     enabled: true
+  mailpit:
+    enabled: true
+notifications:
+  env:
+    Email__SmtpHost: mailpit
+    Email__SmtpPort: "1025"
 settlement:
   env: { FaultInjection__Enabled: "true" }
 payout:

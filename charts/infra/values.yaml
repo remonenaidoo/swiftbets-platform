@@ -33,6 +33,14 @@ sqlserver:
     requests: { cpu: 250m, memory: 1Gi }
     limits: { memory: 2Gi }
 
+# Catches account email on local clusters, where there is no provider; never enabled in the cloud.
+mailpit:
+  enabled: false
+  image: axllent/mailpit:v1.29
+  resources:
+    requests: { cpu: 10m, memory: 32Mi }
+    limits: { memory: 64Mi }
+
 topics:
   enabled: true
   image: docker.redpanda.com/redpandadata/redpanda:v26.1.18

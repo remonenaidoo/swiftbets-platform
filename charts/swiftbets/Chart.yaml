@@ -21,3 +21,4 @@ dependencies:
   - { name: risk, version: 0.1.0, repository: file://../risk }
   - { name: gateway, version: 0.1.0, repository: file://../gateway }
   - { name: dashboard, version: 0.1.0, repository: file://../dashboard }
+  - { name: site, version: 0.1.0, repository: file://../site, condition: site.enabled }
