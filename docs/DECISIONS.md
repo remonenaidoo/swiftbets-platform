@@ -587,3 +587,9 @@ A non-idempotent call is retried only when it carries an idempotency key.
 - `sb_config` is Postgres (D90) and the first user of the Postgres outbox. Changes need a reason, are versioned with history and audited; Admin writes, Ops reads (identity 0008).
 - Placement refuses while the kill switch is on or the mode is `closed`, and above per-currency stake and payout limits, before any funds are held. Placement reports ready only once it has read the topic to the end, so a restarted replica cannot miss an active kill switch. `preMatchOnly` waits for the in-play market state.
 - Existing local Postgres volumes created before this need `sb_config` added by hand or a fresh volume; the init script runs once.
+
+**D125. The V2 bet model arrives behind a flag and dual-published, and contracts 1.0.0 stays binary compatible.**
+- A coupon holds bets; a bet is a set of fold sizes over the non-banker legs, and bankers join every line. `SystemBets` in the contracts gives the lines, so placement prices exactly what settlement pays. Each line rounds down on its own; void legs count at 1.00.
+- `EventEnvelope.Context` is an init property and `Create` keeps its 0.x overload, so building-blocks 0.7.0 and every service built on 0.x run unchanged against 1.0.0. The plan called 1.0.0 a breaking major; it ships as a compatible one instead, and the breaks wait for 2.0.0.
+- Placement publishes V2 for every coupon and V1 for any coupon V1 can describe. Settlement indexes both, once per coupon, adopting placement's bet id from V2. It publishes `CouponSettledV2` and keeps `CouponSettledV1` with the coupon's total target, so payout and history need no change yet.
+- System bets and bankers stay closed behind `flags.system-bets` until settlement on V2 is deployed; an operator turns the flag on from the console.

@@ -15,6 +15,11 @@ topics:
     partitions: 6
   - name: swiftbets.placement.coupon-placed.v1.dlq
     retention.ms: 2592000000
+  # V2 coupons (bets over legs, bankers), dual-published beside v1 until contracts 2.0.0.
+  - name: swiftbets.placement.coupon-placed.v2
+    partitions: 6
+  - name: swiftbets.placement.coupon-placed.v2.dlq
+    retention.ms: 2592000000
   - name: swiftbets.placement.coupon-rejected.v1
   - name: swiftbets.wallet.ledger-posted.v1
     partitions: 6
@@ -25,6 +30,10 @@ topics:
   - name: swiftbets.settlement.coupon-settled.v1
     partitions: 6
   - name: swiftbets.settlement.coupon-settled.v1.dlq
+    retention.ms: 2592000000
+  - name: swiftbets.settlement.coupon-settled.v2
+    partitions: 6
+  - name: swiftbets.settlement.coupon-settled.v2.dlq
     retention.ms: 2592000000
   - name: swiftbets.settlement.stuck-coupon.v1
   - name: swiftbets.payout.retry-5s.v1
