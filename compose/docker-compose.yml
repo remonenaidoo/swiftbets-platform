@@ -128,6 +128,7 @@ services:
       STEWARD_DB_PASSWORD: ${STEWARD_DB_PASSWORD}
       HISTORY_DB_PASSWORD: ${HISTORY_DB_PASSWORD}
       NOTIFICATIONS_DB_PASSWORD: ${NOTIFICATIONS_DB_PASSWORD}
+      CONFIG_DB_PASSWORD: ${CONFIG_DB_PASSWORD}
     ports: ["127.0.0.1:7134:5432"]
     volumes:
       - postgres:/var/lib/postgresql/data
