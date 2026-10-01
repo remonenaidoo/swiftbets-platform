@@ -73,3 +73,11 @@ topics:
   - name: swiftbets.notifications.notification-requested.v1
   - name: swiftbets.notifications.notification-requested.v1.dlq
     retention.ms: 2592000000
+  - name: swiftbets.compliance.limit-changed.v1
+  # The whole responsible-gambling state per account; the wallet reads it to the end before it takes stakes.
+  - name: swiftbets.compliance.restrictions-changed.v1
+    config: { cleanup.policy: compact }
+  - name: swiftbets.compliance.self-exclusion-started.v1
+  - name: swiftbets.compliance.self-exclusion-started.v1.dlq
+    retention.ms: 2592000000
+  - name: swiftbets.compliance.kyc-status-changed.v1

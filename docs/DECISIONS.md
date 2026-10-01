@@ -531,3 +531,11 @@ A non-idempotent call is retried only when it carries an idempotency key.
 - Server-rendered pages (`/account` today, every page later) must see the session; a cookie scoped to `/api` never reaches them.
 - It stays HttpOnly, Secure and SameSite=Strict; each write and sign-out also expires the old `/api` copy.
 - `scripts/gate-e1.sh` proves the E1 gate through the gateway: register, age gate, emailed verification through Mailpit, two devices, revoke one, account page, seeded sign-in. The kind install runs it once identity and wallet publish their own images (they still need package access).
+
+**D114. Contract versions follow semver, not the roadmap table.**
+- An additive change takes the next minor even within an epic; the wallet failure codes for limits and restrictions made contracts 0.7.0 during E2.
+- The roadmap's later numbers shift by one (payments 0.8.0, and so on); majors stay tied to their epics.
+
+**D115. Compliance runs on SQL Server as `SbCompliance`, the sixth free-offer database.**
+- Limits and exclusions are regulated state (D90). Six of the ten databases the free offer allows are now used; payments and casino rounds bring it to eight.
+- `compliance.restrictions-changed.v1` is compacted; the wallet reads it to the end before it reports ready, so it never takes a stake against rules it has not seen.

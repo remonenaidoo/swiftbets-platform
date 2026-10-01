@@ -13,6 +13,7 @@ localSecrets:
     settlement: Local-Dev-Settlement-1
     payout: Local-Dev-Payout-1
     identity: Local-Dev-Identity-1
+    compliance: Local-Dev-Compliance-1
     steward: local-dev-steward
     history: local-dev-history
     notifications: local-dev-notifications

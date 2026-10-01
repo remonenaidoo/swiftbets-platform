@@ -113,6 +113,7 @@ services:
       SETTLEMENT_DB_PASSWORD: ${SETTLEMENT_DB_PASSWORD}
       PAYOUT_DB_PASSWORD: ${PAYOUT_DB_PASSWORD}
       IDENTITY_DB_PASSWORD: ${IDENTITY_DB_PASSWORD}
+      COMPLIANCE_DB_PASSWORD: ${COMPLIANCE_DB_PASSWORD}
     volumes: ["./sqlserver:/init:ro"]
     networks: [swiftbets]
     depends_on:
@@ -242,6 +243,33 @@ services:
     healthcheck: { <<: *dotnet-healthcheck, test: ["CMD", "dotnet", "/app/SwiftBets.Identity.Api.dll", "--healthcheck"] }
     depends_on:
       identity-migrator: { condition: service_completed_successfully }
+      topics: { condition: service_completed_successfully }
+
+  compliance-migrator:
+    <<: *migrator
+    image: ghcr.io/remonenaidoo/swiftbets-compliance-migrator:${SWIFTBETS_TAG:-local}
+    build: { context: ../../swiftbets-compliance, dockerfile: deploy/SwiftBets.Compliance.Migrator.Dockerfile }
+    environment:
+      ConnectionStrings__SbCompliance: Server=sqlserver,1433;Database=SbCompliance;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True
+      Migrator__EnsureDatabase: "true"
+      Migrator__AppLogin: compliance_app
+    depends_on:
+      sqlserver-init: { condition: service_completed_successfully }
+
+  # Limits, exclusions and session settings; the wallet, identity and gateway enforce what it publishes (ADR 0006).
+  compliance:
+    <<: *dotnet-service
+    image: ghcr.io/remonenaidoo/swiftbets-compliance:${SWIFTBETS_TAG:-local}
+    build: { context: ../../swiftbets-compliance, dockerfile: deploy/SwiftBets.Compliance.Api.Dockerfile }
+    environment:
+      <<: *dotnet-env
+      Jwt__Authority: http://identity:8080
+      Jwt__RequireHttpsMetadata: "false"
+      ConnectionStrings__SbCompliance: Server=sqlserver,1433;Database=SbCompliance;User Id=compliance_app;Password=${COMPLIANCE_DB_PASSWORD};TrustServerCertificate=True
+      Kafka__ClientId: swiftbets-compliance
+    healthcheck: { <<: *dotnet-healthcheck, test: ["CMD", "dotnet", "/app/SwiftBets.Compliance.Api.dll", "--healthcheck"] }
+    depends_on:
+      compliance-migrator: { condition: service_completed_successfully }
       topics: { condition: service_completed_successfully }
 
   # Catches every account email in dev; the inbox is at http://127.0.0.1:7125.
@@ -509,6 +537,7 @@ services:
       Kafka__ClientId: swiftbets-gateway
       Gateway__IdentityAddress: http://identity:8080
       ReverseProxy__Clusters__identity__Destinations__primary__Address: http://identity:8080
+      ReverseProxy__Clusters__compliance__Destinations__primary__Address: http://compliance:8080
       # Open preview: sign visitors in as this demo account automatically. Off when empty.
       Gateway__DemoSignIn__Username: ${GATEWAY_DEMO_SIGN_IN_USER:-}
       Gateway__DemoSignIn__PunterUsername: ${GATEWAY_DEMO_SIGN_IN_PUNTER:-}

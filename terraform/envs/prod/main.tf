@@ -18,7 +18,7 @@ provider "helm" {
 
 locals {
   install  = var.kubeconfig_path != ""
-  services = ["placement", "wallet", "settlement", "payout", "identity"]
+  services = ["placement", "wallet", "settlement", "payout", "identity", "compliance"]
 }
 
 module "oci" {
