@@ -25,6 +25,8 @@ jobs:
           ./actionlint -color
       - name: Chart copies of the compose init scripts are in sync
         run: scripts/sync-chart-files.sh --check
+      - name: Only encrypted secrets are committed
+        run: scripts/check-secrets.sh
       - name: Prometheus alert rules and their tests
         run: scripts/check-prometheus.sh
       - name: Grafana dashboards are valid JSON
@@ -40,7 +42,11 @@ jobs:
       - name: Lint (local and cloud values)
         run: |
           helm lint charts/swiftbets -f charts/swiftbets/values-local.yaml
-          helm lint charts/swiftbets -f charts/swiftbets/values-cloud.yaml
+          helm lint charts/swiftbets -f charts/swiftbets/values-prod.yaml --set global.imageTag=0.0.0-ci
+      - name: Production values are safe and schema-valid
+        run: |
+          curl -sSfL https://github.com/yannh/kubeconform/releases/download/v0.7.0/kubeconform-linux-amd64.tar.gz | tar xz -C /usr/local/bin kubeconform
+          scripts/check-prod-values.sh
 
   kind-install:
     needs: charts
@@ -80,7 +86,7 @@ jobs:
         run: terraform fmt -check -recursive terraform
       - name: Validate
         run: |
-          for dir in terraform/modules/oci terraform/modules/azure-sql terraform/envs/cloud; do
+          for dir in terraform/modules/oci terraform/modules/azure-sql terraform/envs/prod; do
             terraform -chdir="$dir" init -backend=false -input=false >/dev/null
             terraform -chdir="$dir" validate
           done

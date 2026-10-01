@@ -96,7 +96,7 @@ resource "helm_release" "swiftbets" {
   chart             = "${path.module}/../../../charts/swiftbets"
   dependency_update = true
   values = concat([
-    file("${path.module}/../../../charts/swiftbets/values-cloud.yaml"),
+    file("${path.module}/../../../charts/swiftbets/values-prod.yaml"),
     yamlencode({
       global  = { imageTag = var.image_tag }
       ingress = { host = var.ingress_host }

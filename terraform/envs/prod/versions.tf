@@ -14,7 +14,7 @@ terraform {
   # State lives in OCI Object Storage through its S3-compatible API. Supply the bucket, region and endpoint at
   # init time: terraform init -backend-config=backend.hcl (see backend.hcl.example and docs/DEPLOY.md).
   backend "s3" {
-    key                         = "swiftbets/cloud.tfstate"
+    key                         = "swiftbets/prod.tfstate"
     skip_region_validation      = true
     skip_credentials_validation = true
     skip_requesting_account_id  = true

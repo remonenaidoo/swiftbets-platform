@@ -1,4 +1,4 @@
-# Shared by every environment. values-local.yaml and values-cloud.yaml layer on top.
+# Shared by every environment. values-local.yaml and values-prod.yaml layer on top.
 global:
   imageRegistry: ghcr.io/remonenaidoo
   imageTag: main
