@@ -1,6 +1,6 @@
 # SwiftBets - Product Plan
 
-Status: **proposed 1 Oct 2026, awaiting approval.** Nothing in this document is built yet.
+Status: **approved 1 Oct 2026** with the answers in `DECISIONS.md` D91, D97-D99. E1 in progress.
 
 It extends `BLUEPRINT.md` (v1.2), `DEMO_SCOPE.md`, `PLAN.md` and `DECISIONS.md` (D1-D84). Where this plan changes an earlier decision, the change is listed in C1 and will be logged as D85 onwards, with ADRs under `docs/adr/`, once approved.
 
