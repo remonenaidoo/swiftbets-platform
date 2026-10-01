@@ -1,0 +1,40 @@
+rule_files:
+  - ../rules/notifications.yml
+evaluation_interval: 1m
+tests:
+  - interval: 1m
+    input_series:
+      - series: 'swiftbets_notifications_deliveries_total{channel="Email",template="promo.free-bet",status="Rejected"}'
+        values: '0 0 1 1 1'
+      - series: 'swiftbets_notifications_deliveries_total{channel="Email",template="account.verify-email",status="Sent"}'
+        values: '0 1 2 3 4'
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: NotificationsRejected
+        exp_alerts: []
+      - eval_time: 3m
+        alertname: NotificationsRejected
+        exp_alerts:
+          - exp_labels: { severity: warning, area: customer, template: promo.free-bet }
+            exp_annotations:
+              summary: "Notifications rejected 1 promo.free-bet request(s) in 15 minutes"
+              description: "A sender is publishing requests notifications cannot render (unknown template, missing data or a bad address); those customers got no email."
+              runbook: notifications-rejected
+  - interval: 1m
+    input_series:
+      - series: 'swiftbets_notifications_deliveries_total{channel="Email",template="account.verify-email",status="Skipped"}'
+        values: '0+1x60'
+      - series: 'swiftbets_notifications_deliveries_total{channel="Email",template="account.verify-email",status="Sent"}'
+        values: '0x60'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: NotificationsNotSending
+        exp_alerts: []
+      - eval_time: 40m
+        alertname: NotificationsNotSending
+        exp_alerts:
+          - exp_labels: { severity: critical, area: customer }
+            exp_annotations:
+              summary: "Email requests are being skipped and none are sent"
+              description: "No email provider is configured or reachable, so verification and reset emails are not leaving."
+              runbook: notifications-rejected

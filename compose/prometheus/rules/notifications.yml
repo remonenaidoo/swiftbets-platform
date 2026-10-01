@@ -1,0 +1,23 @@
+# Every alert names its runbook in swiftbets-steward/runbooks, which Steward also retrieves.
+groups:
+  - name: notifications
+    rules:
+      - alert: NotificationsRejected
+        expr: sum by (template) (increase(swiftbets_notifications_deliveries_total{status="Rejected"}[15m])) > 0
+        labels:
+          severity: warning
+          area: customer
+        annotations:
+          summary: "Notifications rejected {{ $value }} {{ $labels.template }} request(s) in 15 minutes"
+          description: "A sender is publishing requests notifications cannot render (unknown template, missing data or a bad address); those customers got no email."
+          runbook: notifications-rejected
+      - alert: NotificationsNotSending
+        expr: sum(increase(swiftbets_notifications_deliveries_total{channel="Email",status="Skipped"}[30m])) > 0 and sum(increase(swiftbets_notifications_deliveries_total{status="Sent"}[30m])) == 0
+        for: 15m
+        labels:
+          severity: critical
+          area: customer
+        annotations:
+          summary: "Email requests are being skipped and none are sent"
+          description: "No email provider is configured or reachable, so verification and reset emails are not leaving."
+          runbook: notifications-rejected

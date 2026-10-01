@@ -38,7 +38,7 @@ module "azure_sql" {
 }
 
 resource "random_password" "db" {
-  for_each = toset(concat(local.services, ["steward", "history", "postgres"]))
+  for_each = toset(concat(local.services, ["steward", "history", "notifications", "postgres"]))
   length   = 32
   special  = false
 }
@@ -71,17 +71,19 @@ resource "kubernetes_secret_v1" "swiftbets" {
   }
   data = merge(
     {
-      "demo-password"         = random_password.client["demo"].result
-      "sqlserver-sa-password" = module.azure_sql.admin_password
-      "postgres-password"     = random_password.db["postgres"].result
-      "payout-client-secret"  = random_password.client["payout"].result
-      "steward-client-secret" = random_password.client["steward"].result
-      "steward-db-password"   = random_password.db["steward"].result
-      "history-db-password"   = random_password.db["history"].result
-      "sb-steward"            = "Host=postgres;Database=sb_steward;Username=steward_app;Password=${random_password.db["steward"].result}"
-      "sb-history"            = "Host=postgres;Database=sb_history;Username=history_app;Password=${random_password.db["history"].result}"
-      "anthropic-api-key"     = var.anthropic_api_key
-      "identity-signing-key"  = tls_private_key.identity.private_key_pem
+      "demo-password"             = random_password.client["demo"].result
+      "sqlserver-sa-password"     = module.azure_sql.admin_password
+      "postgres-password"         = random_password.db["postgres"].result
+      "payout-client-secret"      = random_password.client["payout"].result
+      "steward-client-secret"     = random_password.client["steward"].result
+      "steward-db-password"       = random_password.db["steward"].result
+      "history-db-password"       = random_password.db["history"].result
+      "notifications-db-password" = random_password.db["notifications"].result
+      "sb-steward"                = "Host=postgres;Database=sb_steward;Username=steward_app;Password=${random_password.db["steward"].result}"
+      "sb-history"                = "Host=postgres;Database=sb_history;Username=history_app;Password=${random_password.db["history"].result}"
+      "sb-notifications"          = "Host=postgres;Database=sb_notifications;Username=notifications_app;Password=${random_password.db["notifications"].result}"
+      "anthropic-api-key"         = var.anthropic_api_key
+      "identity-signing-key"      = tls_private_key.identity.private_key_pem
     },
     { for s in local.services : "${s}-db-password" => random_password.db[s].result },
     { for s in local.services : "sb-${s}" => "Server=tcp:${module.azure_sql.server_fqdn},1433;Database=Sb${title(s)};User Id=${s}_app;Password=${random_password.db[s].result};Encrypt=True;TrustServerCertificate=False" },
