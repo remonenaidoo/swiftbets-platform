@@ -77,6 +77,9 @@ topics:
   # The whole responsible-gambling state per account; the wallet reads it to the end before it takes stakes.
   - name: swiftbets.compliance.restrictions-changed.v1
     config: { cleanup.policy: compact }
+  # Operational settings, latest per key; placement reads it to the end before it reports ready.
+  - name: swiftbets.config.entries.v1
+    config: { cleanup.policy: compact }
   - name: swiftbets.compliance.self-exclusion-started.v1
   - name: swiftbets.compliance.self-exclusion-started.v1.dlq
     retention.ms: 2592000000

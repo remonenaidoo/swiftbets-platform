@@ -18,6 +18,7 @@ localSecrets:
     steward: local-dev-steward
     history: local-dev-history
     notifications: local-dev-notifications
+    config: local-dev-config
   clientSecrets:
     payout: local-dev-payout-client-secret
     steward: local-dev-steward-client-secret
@@ -29,6 +30,8 @@ infra:
     enabled: true
   mailpit:
     enabled: true
+config:
+  resources: { requests: { cpu: 20m } }
 notifications:
   resources: { requests: { cpu: 20m } }
   env:

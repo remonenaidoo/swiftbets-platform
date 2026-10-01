@@ -580,3 +580,10 @@ A non-idempotent call is retried only when it carries an idempotency key.
 - The deposit form posts to the site, which redirects to the provider's checkout. The site's CSP `form-action` lists those origins from `CHECKOUT_ORIGINS` (default Paystack checkout; the simulator locally), so the redirect also works without JavaScript. Card details never touch SwiftBets.
 - Ops and Admin get `payments.read` and `payments.approve` (identity migration 0007). The console's Finance view shows the approval queue and the latest run per provider.
 - Local clusters request 20m CPU per service so the whole platform fits one kind node; production values are unchanged.
+
+**D124. Operational settings live in the config service and travel on one compacted topic.**
+- Config contracts ship as contracts 0.9.0, ahead of the 1.0.0 major (envelope context, coupon V2), so E4 can start without the envelope change. The roadmap's 1.0.0 keeps everything else.
+- `config.entries.v1` is compacted and keyed by setting; `ConfigKeys` in the contracts names every key and holds the one validator the service enforces and the parsers consumers use. A key never set means the consumer's built-in default, so an empty topic changes nothing.
+- `sb_config` is Postgres (D90) and the first user of the Postgres outbox. Changes need a reason, are versioned with history and audited; Admin writes, Ops reads (identity 0008).
+- Placement refuses while the kill switch is on or the mode is `closed`, and above per-currency stake and payout limits, before any funds are held. Placement reports ready only once it has read the topic to the end, so a restarted replica cannot miss an active kill switch. `preMatchOnly` waits for the in-play market state.
+- Existing local Postgres volumes created before this need `sb_config` added by hand or a fresh volume; the init script runs once.

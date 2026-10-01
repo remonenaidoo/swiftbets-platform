@@ -143,6 +143,18 @@ notifications:
       image: { repository: swiftbets-notifications-migrator }
       secretEnv: { ConnectionStrings__SbNotifications: { key: sb-notifications } }
 
+config:
+  enabled: true
+  image: { repository: swiftbets-config }
+  env:
+    Kafka__ClientId: swiftbets-config
+  secretEnv:
+    ConnectionStrings__SbConfig: { key: sb-config }
+  migrators:
+    - name: config-migrator
+      image: { repository: swiftbets-config-migrator }
+      secretEnv: { ConnectionStrings__SbConfig: { key: sb-config } }
+
 wallet:
   image: { repository: swiftbets-wallet }
   grpcPort: 8081
