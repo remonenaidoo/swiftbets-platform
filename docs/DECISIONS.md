@@ -510,3 +510,11 @@ A non-idempotent call is retried only when it carries an idempotency key.
 **D108. Identity's account events commit in the same transaction as the change.**
 - The store enqueues `UserRegisteredV1`, `EmailVerifiedV1`, `AccountStatusChangedV1` and, when an account leaves Active, `SessionRevokedV1` into the outbox inside the write's transaction.
 - A refused or repeated change publishes nothing; every event is keyed by user id, so one customer's events stay in order.
+
+**D109. Front-end packages are released as tarballs on GitHub releases.**
+- `@swiftbets/design-tokens` is packed by a dispatched release and attached to `v<version>`; consumers depend on the tarball URL, the same way the TypeScript contracts ship.
+- No registry account or token is needed, and a version is immutable once released.
+
+**D110. The server-rendered site runs beside the mobile web export until it serves every page.**
+- Its image is `swiftbets-site`, because `swiftbets-web` is already the export's package and a new repository cannot publish to it.
+- The gateway sends `/account/*`, `/site-assets/*` and `/__manifest` to `site`; everything else still reaches `web`. Each page moves as the site gains it, then the catch-all flips and the export retires (ADR 0003).
