@@ -593,3 +593,9 @@ A non-idempotent call is retried only when it carries an idempotency key.
 - `EventEnvelope.Context` is an init property and `Create` keeps its 0.x overload, so building-blocks 0.7.0 and every service built on 0.x run unchanged against 1.0.0. The plan called 1.0.0 a breaking major; it ships as a compatible one instead, and the breaks wait for 2.0.0.
 - Placement publishes V2 for every coupon and V1 for any coupon V1 can describe. Settlement indexes both, once per coupon, adopting placement's bet id from V2. It publishes `CouponSettledV2` and keeps `CouponSettledV1` with the coupon's total target, so payout and history need no change yet.
 - System bets and bankers stay closed behind `flags.system-bets` until settlement on V2 is deployed; an operator turns the flag on from the console.
+
+**D126. Bet history is its own service, swiftbets-bethistory.**
+- The read model moves out of placement unchanged: same `sb_history` schema, same consumer groups and the same migration journal names, so an existing database carries over and nothing is replayed. The migrator gains rollbacks.
+- Customers read `/me/coupons` (and one coupon) through the gateway; operators look up any punter's coupons under `/admin/history`. Placement keeps its copy read-only (`History:RunProjector=false`) until its History projects are removed.
+- History still projects `CouponSettledV1`, which settlement publishes for every coupon; it moves to V2 with the contracts 2.0.0 cleanup.
+

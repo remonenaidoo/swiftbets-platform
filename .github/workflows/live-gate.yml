@@ -11,7 +11,7 @@ on:
         default: main
       build:
         description: Space-separated repos to build from source instead of pulling
-        default: swiftbets-identity swiftbets-wallet
+        default: swiftbets-identity swiftbets-wallet swiftbets-bethistory
   schedule:
     - cron: '17 2 * * *'
   pull_request:
@@ -34,7 +34,7 @@ jobs:
     timeout-minutes: 60
     env:
       SWIFTBETS_TAG: ${{ inputs.tag || 'main' }}
-      BUILD_REPOS: ${{ inputs.build || 'swiftbets-identity swiftbets-wallet' }}
+      BUILD_REPOS: ${{ inputs.build || 'swiftbets-identity swiftbets-wallet swiftbets-bethistory' }}
       COMPOSE: docker compose --project-directory swiftbets-platform/compose -f swiftbets-platform/compose/docker-compose.yml
       GATEWAY: http://127.0.0.1:7100
       MAILPIT: http://127.0.0.1:7125
@@ -55,10 +55,13 @@ jobs:
       - name: Pull images
         run: $COMPOSE pull --quiet --ignore-pull-failures
       - name: Build images from source
-        # Each repo builds its service and its migrator, named after the repo without the swiftbets- prefix.
+        # Each repo builds every compose service whose build context is that repo.
         run: |
           services=()
-          for repo in $BUILD_REPOS; do services+=("${repo#swiftbets-}" "${repo#swiftbets-}-migrator"); done
+          for repo in $BUILD_REPOS; do
+            mapfile -t -O "${#services[@]}" services < <($COMPOSE config --format json |
+              jq -r --arg r "/$repo" '.services | to_entries[] | select((.value.build.context // "") | endswith($r)) | .key')
+          done
           echo "building: ${services[*]}"
           $COMPOSE build "${services[@]}"
       # SQL Server 2025 now and then dies at first start on hosted runners (errno 11); it comes up on a fresh try.

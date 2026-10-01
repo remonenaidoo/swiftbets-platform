@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # E4 gate through the gateway, the parts landed so far: the kill switch stops placement within five seconds and lifting
-# it reopens placement; with system bets switched on, a banker Trixie is accepted as four lines.
+# it reopens placement; with system bets switched on, a banker Trixie is accepted as four lines and bet history shows it.
 # usage: GATEWAY=http://localhost:7100 scripts/gate-e4.sh
 set -euo pipefail
 
@@ -75,5 +75,17 @@ done
 [[ "$(jq '.bets[0].lines' "$work/body")" == 4 ]] || fail "the Trixie has $(jq '.bets[0].lines' "$work/body") lines"
 [[ "$(jq '[.legs[] | select(.banker)] | length' "$work/body")" == 1 ]] || fail "the banker was not kept"
 echo "ok   banker Trixie placed as four lines"
+trixie_id="$(jq -r '.couponId' "$work/body")"
 
-echo "E4 gate (kill switch, system bets) passed"
+# 3. Bet history, served by its own service, shows the Trixie as a system bet.
+for _ in $(seq 1 30); do
+  if [[ "$(api punter GET '/me/coupons?limit=20')" == 200 ]] &&
+    jq -e --arg id "$trixie_id" 'any(.[]; .couponId == $id and .betType == "system" and .stake == 400)' "$work/body" >/dev/null; then
+    echo "ok   bet history shows the Trixie as a system bet"
+    break
+  fi
+  sleep 2
+done
+jq -e --arg id "$trixie_id" 'any(.[]; .couponId == $id)' "$work/body" >/dev/null || fail "bet history never showed $trixie_id: $(head -c 300 "$work/body")"
+
+echo "E4 gate (kill switch, system bets, bet history) passed"
