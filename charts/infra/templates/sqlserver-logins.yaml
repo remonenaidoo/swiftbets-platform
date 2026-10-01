@@ -29,7 +29,7 @@ spec:
           env:
             - name: SQLCMDPASSWORD
               valueFrom: { secretKeyRef: { name: {{ .Values.secretName }}, key: sqlserver-sa-password } }
-            {{- range $svc := list "placement" "wallet" "settlement" "payout" }}
+            {{- range $svc := list "placement" "wallet" "settlement" "payout" "identity" }}
             - name: {{ upper $svc }}_DB_PASSWORD
               valueFrom: { secretKeyRef: { name: {{ $.Values.secretName }}, key: {{ $svc }}-db-password } }
             {{- end }}

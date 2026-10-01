@@ -12,6 +12,7 @@ scrape_configs:
       - targets:
           - offer:8080
           - placement:8080
+          - identity:8080
           - wallet:8080
           - settlement:8080
           - payout:8080
