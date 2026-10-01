@@ -72,5 +72,7 @@ risk:
   resources: { requests: { cpu: 20m } }
 site:
   resources: { requests: { cpu: 20m } }
+  env:
+    CHECKOUT_ORIGINS: http://127.0.0.1:7140
 dashboard:
   resources: { requests: { cpu: 20m } }

@@ -626,6 +626,7 @@ services:
     build: { context: ../../swiftbets-web }
     environment:
       GATEWAY_URL: http://gateway:8080
+      CHECKOUT_ORIGINS: http://127.0.0.1:7140
     ports: ["127.0.0.1:7113:8080"]
     networks: [swiftbets]
     mem_limit: 192m
