@@ -539,3 +539,13 @@ A non-idempotent call is retried only when it carries an idempotency key.
 **D115. Compliance runs on SQL Server as `SbCompliance`, the sixth free-offer database.**
 - Limits and exclusions are regulated state (D90). Six of the ten databases the free offer allows are now used; payments and casino rounds bring it to eight.
 - `compliance.restrictions-changed.v1` is compacted; the wallet reads it to the end before it reports ready, so it never takes a stake against rules it has not seen.
+
+**D116. Session-time limits are enforced by the gateway per browser session; reality checks are shown by the site.**
+- The gateway reads compliance's compacted snapshot and ends a browser session once it is older than the customer's limit (401 `session_time_limit`). Signing in again starts a new session; a cool-down between sessions is not a South African requirement and is left out of E2.
+- `GET /api/session` reports `startedAt`, `sessionLimitMinutes` and `realityCheckMinutes`; the site opens a "Time check" reminder at each interval, with links to safer gambling and sign-out.
+- Building-blocks 0.6.1: a compacted-state reader now waits out an unreachable broker instead of stopping its host.
+
+**D117. Identity verification uses a sandbox provider until a real one is contracted; withdrawals gate on it in E3.**
+- `IKycProvider` keeps the provider swappable; the sandbox accepts well-formed SA ID numbers (Luhn) and passports, and rejects numbers ending in 0000 so tests can drive both outcomes.
+- Only the document type and last four characters are stored.
+- KYC status travels in the compacted snapshot; payments (E3) refuse withdrawals unless it is verified.
