@@ -282,6 +282,7 @@ services:
       Jwt__Authority: http://placement:8080
       Jwt__RequireHttpsMetadata: "false"
       Identity__Issuer: http://placement:8080
+      Identity__SigningKeyPem: ${IDENTITY_SIGNING_KEY_PEM:-}
       Identity__SeedDemoUsers: "true"
       Identity__DemoPassword: ${DEMO_PASSWORD:?set DEMO_PASSWORD in .env}
       Identity__LoadTestUserCount: ${LOAD_TEST_USERS:-100}

@@ -4,6 +4,7 @@ COMPOSE := docker compose --project-directory compose -f compose/docker-compose.
 
 env:
 	@test -f compose/.env || cp compose/.env.example compose/.env
+	@scripts/ensure-signing-key.sh
 
 packages:
 	@for repo in ../swiftbets-*/; do \
