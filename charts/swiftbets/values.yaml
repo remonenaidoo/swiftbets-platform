@@ -66,6 +66,7 @@ identity:
   env:
     Identity__Issuer: http://identity:8080
     Kafka__ClientId: swiftbets-identity
+    AccountEmail__Delivery: Notifications
     Identity__SeedDemoUsers: "true"
     Identity__LoadTestUserCount: "100"
     Jwt__Authority: http://identity:8080
@@ -83,10 +84,9 @@ identity:
         ConnectionStrings__SbIdentity: { key: sb-identity-migrate }
         Migrator__ImportFromPlacement: { key: sb-placement-migrate }
 
-# Off until the swiftbets-notifications image is published from its main; then identity's AccountEmail__Delivery
-# switches to Notifications so every account email goes through it.
+# Sends every customer email from NotificationRequestedV1 (D107).
 notifications:
-  enabled: false
+  enabled: true
   image: { repository: swiftbets-notifications }
   env:
     Kafka__ClientId: swiftbets-notifications

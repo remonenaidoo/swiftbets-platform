@@ -535,6 +535,21 @@ services:
     restart: unless-stopped
     healthcheck: { test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/healthz"], interval: 10s, timeout: 3s, retries: 5 }
 
+  # The server-rendered customer site; the gateway sends /account here and everything else to web for now.
+  site:
+    image: ghcr.io/remonenaidoo/swiftbets-site:${SWIFTBETS_TAG:-local}
+    build: { context: ../../swiftbets-web }
+    environment:
+      GATEWAY_URL: http://gateway:8080
+    ports: ["127.0.0.1:7113:8080"]
+    networks: [swiftbets]
+    mem_limit: 192m
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+    healthcheck: { test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/healthz"], interval: 10s, timeout: 3s, retries: 5 }
+
   dashboard:
     image: ghcr.io/remonenaidoo/swiftbets-dashboard:${SWIFTBETS_TAG:-local}
     build: { context: ../../swiftbets-dashboard }

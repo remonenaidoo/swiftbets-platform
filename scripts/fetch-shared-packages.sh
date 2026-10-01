@@ -22,5 +22,11 @@ props="$root/Directory.Packages.props"
   done | sort -u |
   while read -r repo tag; do
     echo "fetching $repo $tag"
-    gh release download "$tag" --repo "$owner/$repo" --pattern '*.nupkg' --dir "$feed" --clobber
+    # GitHub's release-asset API answers 5xx now and then; three tries with backoff before giving up.
+    for attempt in 1 2 3; do
+      gh release download "$tag" --repo "$owner/$repo" --pattern '*.nupkg' --dir "$feed" --clobber && break
+      ((attempt < 3)) || exit 1
+      echo "retrying $repo $tag (attempt $((attempt + 1)))"
+      sleep $((attempt * 5))
+    done
   done
