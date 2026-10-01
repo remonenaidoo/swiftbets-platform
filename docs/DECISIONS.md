@@ -491,3 +491,7 @@ A non-idempotent call is retried only when it carries an idempotency key.
 - `SbWallet` 0003 funded five demo punters in every deployment, production included.
 - 0005 removes seeded punters that were never used (balance untouched, no other posting or reservation), so a demo environment with activity keeps its ledger whole; its rollback puts the seed back.
 - `Migrator:SeedDemo=true` re-applies the seed idempotently after migrations; compose and the default chart values set it, production values set it to false and `check-prod-values.sh` refuses it.
+
+**D105. Shared packages can be released by a dispatched workflow as well as by a pushed tag.**
+- Sessions can push branches but not tags, so the release workflow takes a `version` input and creates the tag through the API on the commit it built.
+- Contracts and building-blocks run it with `workflow_dispatch`; a pushed `v*` tag still works exactly as before.
