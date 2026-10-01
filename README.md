@@ -20,6 +20,7 @@ SwiftBets is a soccer-first sports betting platform built as a production-grade 
 | [swiftbets-gateway](https://github.com/remonenaidoo/swiftbets-gateway) | YARP BFF, cookie-to-bearer, rate limits |
 | [swiftbets-realtime](https://github.com/remonenaidoo/swiftbets-realtime) | Kafka → SignalR, sequence-numbered deltas |
 | [swiftbets-notifications](https://github.com/remonenaidoo/swiftbets-notifications) | Customer email from `NotificationRequestedV1`, marketing suppression |
+| [swiftbets-compliance](https://github.com/remonenaidoo/swiftbets-compliance) | Responsible gambling: limits with a 24-hour wait on raises, cooling-off and self-exclusion, session settings |
 | [swiftbets-web](https://github.com/remonenaidoo/swiftbets-web) | Server-rendered customer site (React Router 7, nonce CSP); account pages today |
 | [swiftbets-design-tokens](https://github.com/remonenaidoo/swiftbets-design-tokens) | SwiftBets and SwiftPlay brand tokens for every front end |
 | [swiftbets-dashboard](https://github.com/remonenaidoo/swiftbets-dashboard) | React ops UI |

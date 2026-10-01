@@ -84,6 +84,20 @@ identity:
         ConnectionStrings__SbIdentity: { key: sb-identity-migrate }
         Migrator__ImportFromPlacement: { key: sb-placement-migrate }
 
+# Limits, exclusions and session settings (ADR 0006); the wallet reads its compacted snapshot.
+compliance:
+  enabled: true
+  image: { repository: swiftbets-compliance }
+  env:
+    Kafka__ClientId: swiftbets-compliance
+  secretEnv:
+    ConnectionStrings__SbCompliance: { key: sb-compliance }
+  migrators:
+    - name: compliance-migrator
+      image: { repository: swiftbets-compliance-migrator }
+      env: { Migrator__AppLogin: compliance_app, Migrator__EnsureDatabase: "true" }
+      secretEnv: { ConnectionStrings__SbCompliance: { key: sb-compliance-migrate } }
+
 # Sends every customer email from NotificationRequestedV1 (D107).
 notifications:
   enabled: true
@@ -182,6 +196,7 @@ gateway:
     Kafka__ClientId: swiftbets-gateway
     Gateway__IdentityAddress: http://identity:8080
     ReverseProxy__Clusters__identity__Destinations__primary__Address: http://identity:8080
+    ReverseProxy__Clusters__compliance__Destinations__primary__Address: http://compliance:8080
 
 # Server-rendered customer pages; the gateway sends /account, /site-assets and /__manifest here (D110).
 site:
