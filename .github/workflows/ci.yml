@@ -18,7 +18,7 @@ jobs:
           cp compose/.env.example compose/.env
           docker compose --project-directory compose -f compose/docker-compose.yml config -q
       - name: Shell scripts
-        run: shellcheck scripts/*.sh compose/redpanda/*.sh compose/postgres/*.sh
+        run: shellcheck scripts/*.sh scripts/testdata/*.sh compose/redpanda/*.sh compose/postgres/*.sh
       - name: Workflows
         run: |
           bash <(curl -sSfL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
@@ -90,3 +90,27 @@ jobs:
             terraform -chdir="$dir" init -backend=false -input=false >/dev/null
             terraform -chdir="$dir" validate
           done
+
+  restore-drill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - name: Start the databases
+        run: |
+          cp compose/.env.example compose/.env
+          docker compose --project-directory compose -f compose/docker-compose.yml up -d --wait sqlserver postgres redis
+      - name: Seed a balanced ledger
+        run: scripts/testdata/drill-fixture.sh seed
+      - name: Back up and restore
+        run: |
+          BACKUP_DIR="$RUNNER_TEMP/backups" scripts/backup.sh
+          BACKUP_DIR="$RUNNER_TEMP/backups" scripts/restore-drill.sh
+      - name: A drifted ledger fails the drill
+        run: |
+          scripts/testdata/drill-fixture.sh drift
+          BACKUP_DIR="$RUNNER_TEMP/drifted" scripts/backup.sh
+          if BACKUP_DIR="$RUNNER_TEMP/drifted" scripts/restore-drill.sh; then
+            echo "::error::the drill passed a backup whose ledger does not reconcile"
+            exit 1
+          fi
