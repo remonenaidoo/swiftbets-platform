@@ -1,0 +1,32 @@
+# Every alert names its runbook in swiftbets-steward/runbooks, which Steward also retrieves.
+groups:
+  - name: wallet-ledger
+    rules:
+      - alert: WalletLedgerDrift
+        expr: max by (kind) (swiftbets_wallet_reconciliation_drifts) > 0
+        labels:
+          severity: critical
+          area: money-path
+        annotations:
+          summary: "Wallet ledger reconciliation found {{ $value }} {{ $labels.kind }} drift(s)"
+          description: "A balance, reservation or posting no longer agrees with the ledger. Money may be wrong; do not repair by hand without the runbook."
+          runbook: ledger-drift
+      - alert: WalletReconciliationStale
+        expr: time() - max(swiftbets_wallet_reconciliation_last_completed_timestamp_seconds) > 93600
+        for: 15m
+        labels:
+          severity: warning
+          area: money-path
+        annotations:
+          summary: "No wallet ledger reconciliation has completed in over 26 hours"
+          description: "The daily reconciliation has not completed; drift would go unnoticed."
+          runbook: ledger-drift
+      - alert: WalletReconciliationFailing
+        expr: increase(swiftbets_wallet_reconciliation_runs_total{outcome="failed"}[2h]) > 0
+        labels:
+          severity: warning
+          area: money-path
+        annotations:
+          summary: "Wallet ledger reconciliation runs are failing"
+          description: "A reconciliation run threw before completing; check the wallet logs for the error."
+          runbook: ledger-drift
