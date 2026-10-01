@@ -1,6 +1,6 @@
 COMPOSE := docker compose --project-directory compose -f compose/docker-compose.yml
 
-.PHONY: env packages build up down reset ps logs topics
+.PHONY: env packages build up down reset ps logs topics backup restore-drill
 
 env:
 	@test -f compose/.env || cp compose/.env.example compose/.env
@@ -47,3 +47,9 @@ k8s-down: ## Delete the kind cluster
 
 dashboards: ## Regenerate the money-path and Steward Grafana dashboards
 	python3 scripts/gen-dashboards.py
+
+backup: ## Back up every database of the running stack into backups/<timestamp>/
+	scripts/backup.sh
+
+restore-drill: ## Restore the newest backup into scratch databases and verify it
+	scripts/restore-drill.sh

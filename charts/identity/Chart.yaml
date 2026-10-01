@@ -1,0 +1,10 @@
+apiVersion: v2
+name: identity
+description: Accounts, sign-in, tokens and JWKS.
+type: application
+version: 0.1.0
+appVersion: main
+dependencies:
+  - name: swiftbets-service
+    version: 0.1.0
+    repository: file://../swiftbets-service

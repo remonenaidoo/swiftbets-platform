@@ -1,4 +1,4 @@
-# Shared by every environment. values-local.yaml and values-cloud.yaml layer on top.
+# Shared by every environment. values-local.yaml and values-prod.yaml layer on top.
 global:
   imageRegistry: ghcr.io/remonenaidoo
   imageTag: main
@@ -59,6 +59,28 @@ placement:
       image: { repository: swiftbets-history-migrator }
       secretEnv: { ConnectionStrings__SbHistory: { key: sb-history } }
 
+# Off until the swiftbets-identity image is published from placement's main; then set enabled and point the
+# gateway (Gateway__IdentityAddress, the identity cluster) and every Jwt__Authority at http://identity:8080.
+identity:
+  enabled: false
+  image: { repository: swiftbets-identity }
+  env:
+    Identity__Issuer: http://identity:8080
+    Identity__SeedDemoUsers: "false"
+    Jwt__Authority: http://identity:8080
+  secretEnv:
+    ConnectionStrings__SbIdentity: { key: sb-identity }
+    Identity__Clients__payout: { key: payout-client-secret }
+    Identity__Clients__steward: { key: steward-client-secret }
+    Identity__SigningKeyPem: { key: identity-signing-key }
+  migrators:
+    - name: identity-migrator
+      image: { repository: swiftbets-identity-migrator }
+      env: { Migrator__AppLogin: identity_app, Migrator__EnsureDatabase: "true" }
+      secretEnv:
+        ConnectionStrings__SbIdentity: { key: sb-identity-migrate }
+        Migrator__ImportFromPlacement: { key: sb-placement-migrate }
+
 wallet:
   image: { repository: swiftbets-wallet }
   grpcPort: 8081
@@ -72,7 +94,7 @@ wallet:
   migrators:
     - name: wallet-migrator
       image: { repository: swiftbets-wallet-migrator }
-      env: { Migrator__AppLogin: wallet_app, Migrator__EnsureDatabase: "true" }
+      env: { Migrator__AppLogin: wallet_app, Migrator__EnsureDatabase: "true", Migrator__SeedDemo: "true" }
       secretEnv: { ConnectionStrings__SbWallet: { key: sb-wallet-migrate } }
 
 settlement:

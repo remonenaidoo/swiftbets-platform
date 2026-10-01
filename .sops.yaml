@@ -1,0 +1,7 @@
+# Each environment's secrets are encrypted to that environment's age public key (D92). Replace a placeholder with
+# the real public key before creating the environment's secrets/<env>.enc.env.
+creation_rules:
+  - path_regex: secrets/staging\.enc\.env$
+    age: age1stagingpublickeyplaceholder
+  - path_regex: secrets/prod\.enc\.env$
+    age: age1prodpublickeyplaceholder

@@ -1,0 +1,43 @@
+rule_files:
+  - wallet.yml
+evaluation_interval: 1m
+tests:
+  - interval: 1m
+    input_series:
+      - series: 'swiftbets_wallet_reconciliation_drifts{kind="AvailableBalance"}'
+        values: '0 0 1 1'
+      - series: 'swiftbets_wallet_reconciliation_drifts{kind="LedgerTotal"}'
+        values: '0 0 0 0'
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: WalletLedgerDrift
+        exp_alerts: []
+      - eval_time: 3m
+        alertname: WalletLedgerDrift
+        exp_alerts:
+          - exp_labels: { kind: AvailableBalance, severity: critical, area: money-path }
+            exp_annotations:
+              summary: "Wallet ledger reconciliation found 1 AvailableBalance drift(s)"
+              description: "A balance, reservation or posting no longer agrees with the ledger. Money may be wrong; do not repair by hand without the runbook."
+              runbook: ledger-drift
+  - interval: 1m
+    input_series:
+      - series: 'swiftbets_wallet_reconciliation_last_completed_timestamp_seconds'
+        values: '0x1700'
+      - series: 'swiftbets_wallet_reconciliation_runs_total{outcome="failed"}'
+        values: '0x1700'
+    alert_rule_test:
+      - eval_time: 20h
+        alertname: WalletReconciliationStale
+        exp_alerts: []
+      - eval_time: 27h
+        alertname: WalletReconciliationStale
+        exp_alerts:
+          - exp_labels: { severity: warning, area: money-path }
+            exp_annotations:
+              summary: "No wallet ledger reconciliation has completed in over 26 hours"
+              description: "The daily reconciliation has not completed; drift would go unnoticed."
+              runbook: ledger-drift
+      - eval_time: 27h
+        alertname: WalletReconciliationFailing
+        exp_alerts: []

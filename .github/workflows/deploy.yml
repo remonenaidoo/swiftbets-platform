@@ -1,29 +1,26 @@
 name: deploy
 
-# Merging to main deploys the platform to the cloud cluster through the protected `cloud` environment, which
-# requires an approval. Service repos publish :main images on their own merges; a run here (manual or on
-# a platform merge) rolls the cluster onto them.
+# Deploys a released version to production through the protected `prod` environment, which requires an approval.
+# Production is defined but not running yet (D91): until the environment has a KUBECONFIG secret the job only
+# reports that it skipped. Production runs released images only, so the tag must be a semver release.
 on:
-  push:
-    branches: [main]
-    paths: ['charts/**', '.github/workflows/deploy.yml']
   workflow_dispatch:
     inputs:
       image_tag:
-        description: Image tag every service runs
-        default: main
+        description: Released image tag every service runs (x.y.z)
+        required: true
 
 permissions:
   contents: read
 
 concurrency:
-  group: deploy-cloud
+  group: deploy-prod
   cancel-in-progress: false
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: cloud
+    environment: prod
     timeout-minutes: 30
     env:
       KUBECONFIG_DATA: ${{ secrets.KUBECONFIG }}
@@ -32,7 +29,7 @@ jobs:
         id: cluster
         run: |
           if [ -z "$KUBECONFIG_DATA" ]; then
-            echo "::notice::No KUBECONFIG secret on the cloud environment yet; provision with terraform/envs/cloud first."
+            echo "::notice::No KUBECONFIG secret on the prod environment yet; production is defined but not deployed (D91)."
             echo "ready=false" >> "$GITHUB_OUTPUT"
           else
             echo "ready=true" >> "$GITHUB_OUTPUT"
@@ -44,14 +41,13 @@ jobs:
       - name: Deploy
         if: steps.cluster.outputs.ready == 'true'
         env:
-          IMAGE_TAG: ${{ inputs.image_tag || 'main' }}
+          IMAGE_TAG: ${{ inputs.image_tag }}
         run: |
+          [[ "$IMAGE_TAG" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::image_tag must be a released x.y.z"; exit 1; }
           echo "$KUBECONFIG_DATA" > "$RUNNER_TEMP/kubeconfig"
           export KUBECONFIG="$RUNNER_TEMP/kubeconfig"
           scripts/helm-deps.sh
           helm upgrade --install swiftbets charts/swiftbets -n swiftbets \
-            -f charts/swiftbets/values-cloud.yaml --reuse-values \
+            -f charts/swiftbets/values-prod.yaml --reuse-values \
             --set global.imageTag="$IMAGE_TAG" --wait --timeout 20m
-          # :main is a moving tag; restart so every pod pulls the image that tag points at now.
-          kubectl -n swiftbets rollout restart deployment
           kubectl -n swiftbets rollout status deployment --timeout 10m

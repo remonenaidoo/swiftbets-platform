@@ -21,6 +21,9 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- $global := .root.Values.global | default dict -}}
 {{- $registry := .image.registry | default $global.imageRegistry | default "ghcr.io/remonenaidoo" -}}
 {{- $tag := .image.tag | default $global.imageTag | default "main" -}}
+{{- if and $global.requireReleaseTag (or (eq $tag "main") (eq $tag "latest")) -}}
+{{- fail (printf "%s needs a released image tag here (global.imageTag=<semver>), not %q" .image.repository $tag) -}}
+{{- end -}}
 {{- printf "%s/%s:%s" $registry .image.repository $tag -}}
 {{- end -}}
 

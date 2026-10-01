@@ -11,7 +11,7 @@ SwiftBets is a soccer-first sports betting platform built as a production-grade 
 | [swiftbets-contracts](https://github.com/remonenaidoo/swiftbets-contracts) | Versioned event records, error envelope, wallet gRPC proto, generated TS types |
 | [swiftbets-building-blocks](https://github.com/remonenaidoo/swiftbets-building-blocks) | Resilience, Kafka consumer host, outbox, persistence, observability, web |
 | [swiftbets-offer](https://github.com/remonenaidoo/swiftbets-offer) | Historical fixture replay, offer store, read API |
-| [swiftbets-placement](https://github.com/remonenaidoo/swiftbets-placement) | Identity, placement saga, risk limits, wallet ledger (gRPC) |
+| [swiftbets-placement](https://github.com/remonenaidoo/swiftbets-placement) | Placement saga and risk limits; until their own repos exist, also the wallet ledger (gRPC) and the identity service |
 | [swiftbets-settlement](https://github.com/remonenaidoo/swiftbets-settlement) | Evaluate → settle, Lua counters, reconciler, inbound DLQ |
 | [swiftbets-payout](https://github.com/remonenaidoo/swiftbets-payout) | Delta payouts, named-step retry ladder, dead-letter |
 | [swiftbets-steward](https://github.com/remonenaidoo/swiftbets-steward) | Detectors, tool-calling agent, runbook RAG, approvals |
@@ -38,6 +38,7 @@ make up         # builds every image, provisions topics and databases, waits unt
 | http://127.0.0.1:7180 | Redpanda Console |
 | http://127.0.0.1:7130 | Grafana (admin / `GRAFANA_ADMIN_PASSWORD` from `compose/.env`) |
 | http://127.0.0.1:7190 | Prometheus |
+| http://127.0.0.1:7125 | Mailpit: every account email (verification, password reset) lands here |
 
 `make reset` recreates every volume from scratch. `compose/.env` is generated from `.env.example` and never committed.
 

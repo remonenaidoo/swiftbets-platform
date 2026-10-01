@@ -12,6 +12,7 @@ dependencies:
   - { name: offer, version: 0.1.0, repository: file://../offer }
   - { name: placement, version: 0.1.0, repository: file://../placement }
   - { name: wallet, version: 0.1.0, repository: file://../wallet }
+  - { name: identity, version: 0.1.0, repository: file://../identity, condition: identity.enabled }
   - { name: settlement, version: 0.1.0, repository: file://../settlement }
   - { name: payout, version: 0.1.0, repository: file://../payout }
   - { name: steward, version: 0.1.0, repository: file://../steward }

@@ -1,0 +1,36 @@
+# Production (D91): fully defined and validated in CI, applied only once a cluster and accounts exist.
+# No SQL Server StatefulSet: the betstore is external (Azure SQL in the Terraform root), and swiftbets-secrets
+# is written by terraform/envs/prod. Third-party credentials come from secrets/prod.enc.yaml (D92).
+global:
+  # Production runs released images only: install with --set global.imageTag=<semver>. Never :main.
+  imageTag: ""
+  requireReleaseTag: true
+  imagePullPolicy: IfNotPresent
+  env:
+    ASPNETCORE_ENVIRONMENT: Production
+    Kafka__Environment: prod
+    FaultInjection__Enabled: "false"
+infra:
+  sqlserver:
+    enabled: false
+ingress:
+  enabled: true
+  className: traefik
+  host: ""   # set with --set ingress.host=<your host>
+placement:
+  env:
+    Identity__SeedDemoUsers: "false"
+    Identity__LoadTestUserCount: "0"
+wallet:
+  migrators:
+    - name: wallet-migrator
+      image: { repository: swiftbets-wallet-migrator }
+      env: { Migrator__AppLogin: wallet_app, Migrator__EnsureDatabase: "true", Migrator__SeedDemo: "false" }
+      secretEnv: { ConnectionStrings__SbWallet: { key: sb-wallet-migrate } }
+steward:
+  env:
+    # Diagnoses only once an API key is configured; until then incidents open and record why no diagnosis ran.
+    Steward__ModelProvider__Provider: disabled
+gateway:
+  autoscaling: { enabled: false }
+  pdb: { enabled: false }

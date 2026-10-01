@@ -1,0 +1,77 @@
+name: bump-shared
+
+# Opens a pinned-version bump pull request in every consumer when contracts or building-blocks release.
+# Needs SHARED_BUMP_TOKEN: a fine-grained token with contents and pull-request write on the consumer repos.
+on:
+  workflow_dispatch:
+    inputs:
+      family:
+        description: Package family
+        type: choice
+        options: [contracts, building-blocks]
+      version:
+        description: Released version (x.y.z)
+        required: true
+  repository_dispatch:
+    types: [shared-release]
+
+permissions:
+  contents: read
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        consumer:
+          - swiftbets-building-blocks
+          - swiftbets-offer
+          - swiftbets-placement
+          - swiftbets-settlement
+          - swiftbets-payout
+          - swiftbets-steward
+          - swiftbets-gateway
+          - swiftbets-realtime
+          - swiftbets-risk
+    env:
+      FAMILY: ${{ inputs.family || github.event.client_payload.family }}
+      VERSION: ${{ inputs.version || github.event.client_payload.version }}
+      CONSUMER: ${{ matrix.consumer }}
+      GH_TOKEN: ${{ secrets.SHARED_BUMP_TOKEN }}
+    steps:
+      - name: Token present
+        id: token
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::warning::SHARED_BUMP_TOKEN is not set; no bump pull request opened in $CONSUMER"
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v7
+        if: steps.token.outputs.present == 'true'
+        with:
+          path: platform
+      - uses: actions/checkout@v7
+        if: steps.token.outputs.present == 'true'
+        with:
+          repository: remonenaidoo/${{ matrix.consumer }}
+          token: ${{ secrets.SHARED_BUMP_TOKEN }}
+          path: consumer
+      - name: Bump and open a pull request
+        if: steps.token.outputs.present == 'true'
+        working-directory: consumer
+        run: |
+          if [ "$(../platform/scripts/bump-shared.sh "$FAMILY" "$VERSION" .)" = "unchanged" ]; then
+            echo "$CONSUMER already pins $FAMILY $VERSION or does not use it"
+            exit 0
+          fi
+          branch="chore/${FAMILY}-${VERSION}"
+          git config user.name "Remone Naidoo"
+          git config user.email "naidoo.remone@gmail.com"
+          git checkout -b "$branch"
+          git commit -am "chore: ${FAMILY} ${VERSION}"
+          git push --force-with-lease origin "$branch"
+          gh pr view "$branch" >/dev/null 2>&1 || gh pr create --head "$branch" --title "chore: ${FAMILY} ${VERSION}" \
+            --body "Pins every ${FAMILY} package to ${VERSION}, released from swiftbets-${FAMILY}. Opened by the platform bump-shared workflow."

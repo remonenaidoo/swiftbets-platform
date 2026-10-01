@@ -18,13 +18,21 @@ jobs:
           cp compose/.env.example compose/.env
           docker compose --project-directory compose -f compose/docker-compose.yml config -q
       - name: Shell scripts
-        run: shellcheck scripts/*.sh compose/redpanda/*.sh compose/postgres/*.sh
+        run: shellcheck scripts/*.sh scripts/testdata/*.sh compose/redpanda/*.sh compose/postgres/*.sh
       - name: Workflows
         run: |
           bash <(curl -sSfL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
           ./actionlint -color
       - name: Chart copies of the compose init scripts are in sync
         run: scripts/sync-chart-files.sh --check
+      - name: Only encrypted secrets are committed
+        run: scripts/check-secrets.sh
+      - name: Prometheus alert rules and their tests
+        run: scripts/check-prometheus.sh
+      - name: Coverage floors merge reports and fail under the floor
+        run: |
+          scripts/check-coverage.py '{"Sample.Domain": {"line": 66, "branch": 50}}' scripts/testdata/coverage/*.xml
+          ! scripts/check-coverage.py '{"Sample.Domain": {"branch": 51}}' scripts/testdata/coverage/*.xml
       - name: Grafana dashboards are valid JSON
         run: for f in compose/grafana/dashboards/*.json; do python3 -m json.tool "$f" > /dev/null; done
 
@@ -38,7 +46,11 @@ jobs:
       - name: Lint (local and cloud values)
         run: |
           helm lint charts/swiftbets -f charts/swiftbets/values-local.yaml
-          helm lint charts/swiftbets -f charts/swiftbets/values-cloud.yaml
+          helm lint charts/swiftbets -f charts/swiftbets/values-prod.yaml --set global.imageTag=0.0.0-ci
+      - name: Production values are safe and schema-valid
+        run: |
+          curl -sSfL https://github.com/yannh/kubeconform/releases/download/v0.7.0/kubeconform-linux-amd64.tar.gz | tar xz -C /usr/local/bin kubeconform
+          scripts/check-prod-values.sh
 
   kind-install:
     needs: charts
@@ -78,7 +90,31 @@ jobs:
         run: terraform fmt -check -recursive terraform
       - name: Validate
         run: |
-          for dir in terraform/modules/oci terraform/modules/azure-sql terraform/envs/cloud; do
+          for dir in terraform/modules/oci terraform/modules/azure-sql terraform/envs/prod; do
             terraform -chdir="$dir" init -backend=false -input=false >/dev/null
             terraform -chdir="$dir" validate
           done
+
+  restore-drill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - name: Start the databases
+        run: |
+          cp compose/.env.example compose/.env
+          docker compose --project-directory compose -f compose/docker-compose.yml up -d --wait sqlserver postgres redis
+      - name: Seed a balanced ledger
+        run: scripts/testdata/drill-fixture.sh seed
+      - name: Back up and restore
+        run: |
+          BACKUP_DIR="$RUNNER_TEMP/backups" scripts/backup.sh
+          BACKUP_DIR="$RUNNER_TEMP/backups" scripts/restore-drill.sh
+      - name: A drifted ledger fails the drill
+        run: |
+          scripts/testdata/drill-fixture.sh drift
+          BACKUP_DIR="$RUNNER_TEMP/drifted" scripts/backup.sh
+          if BACKUP_DIR="$RUNNER_TEMP/drifted" scripts/restore-drill.sh; then
+            echo "::error::the drill passed a backup whose ledger does not reconcile"
+            exit 1
+          fi
