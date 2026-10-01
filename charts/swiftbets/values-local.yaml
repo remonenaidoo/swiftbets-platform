@@ -14,12 +14,16 @@ localSecrets:
     payout: Local-Dev-Payout-1
     identity: Local-Dev-Identity-1
     compliance: Local-Dev-Compliance-1
+    payments: Local-Dev-Payments-1
     steward: local-dev-steward
     history: local-dev-history
     notifications: local-dev-notifications
   clientSecrets:
     payout: local-dev-payout-client-secret
     steward: local-dev-steward-client-secret
+    payments: local-dev-payments-client-secret
+  paymentsSimulatorApiKey: local-dev-simulator-key
+  paymentsWebhookSecret: local-dev-simulator-webhook-secret
 infra:
   sqlserver:
     enabled: true

@@ -1,0 +1,36 @@
+rule_files:
+  - ../rules/payments.yml
+evaluation_interval: 1m
+tests:
+  - interval: 1m
+    input_series:
+      - series: 'swiftbets_payments_reconciliation_drifts{service="payments",provider="simulator"}'
+        values: '0 0 1 1'
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: PaymentsReconciliationDrift
+        exp_alerts: []
+      - eval_time: 3m
+        alertname: PaymentsReconciliationDrift
+        exp_alerts:
+          - exp_labels: { severity: critical, area: money-path, provider: simulator }
+            exp_annotations:
+              summary: "Payments reconciliation found 1 drift(s) with simulator"
+              description: "The provider and the ledger disagree about money that moved. A customer may be owed a deposit or a payout may be wrong."
+              runbook: payment-drift
+  - interval: 1m
+    input_series:
+      - series: 'swiftbets_payments_webhooks_rejected_total{service="payments",provider="paystack"}'
+        values: '0+1x20'
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: PaymentsWebhooksRejected
+        exp_alerts: []
+      - eval_time: 15m
+        alertname: PaymentsWebhooksRejected
+        exp_alerts:
+          - exp_labels: { severity: warning, area: money-path, provider: paystack }
+            exp_annotations:
+              summary: "15 paystack webhooks rejected for their signature in 15 minutes"
+              description: "Either the webhook secret was rotated on one side only, or someone is posting forged webhooks. Payments are not being confirmed by webhook; the sweep still finishes them."
+              runbook: payment-drift

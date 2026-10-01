@@ -81,3 +81,12 @@ topics:
   - name: swiftbets.compliance.self-exclusion-started.v1.dlq
     retention.ms: 2592000000
   - name: swiftbets.compliance.kyc-status-changed.v1
+  - name: swiftbets.payments.deposit-succeeded.v1
+  - name: swiftbets.payments.deposit-failed.v1
+  - name: swiftbets.payments.withdrawal-requested.v1
+  - name: swiftbets.payments.withdrawal-decided.v1
+  - name: swiftbets.payments.withdrawal-paid.v1
+  - name: swiftbets.payments.withdrawal-failed.v1
+  # Steward opens an incident for every drift; keep a month of them.
+  - name: swiftbets.payments.drift-detected.v1
+    retention.ms: 2592000000

@@ -75,6 +75,7 @@ identity:
     Identity__DemoPassword: { key: demo-password }
     Identity__Clients__payout: { key: payout-client-secret }
     Identity__Clients__steward: { key: steward-client-secret }
+    Identity__Clients__payments: { key: payments-client-secret }
     Identity__SigningKeyPem: { key: identity-signing-key }
   migrators:
     - name: identity-migrator
@@ -97,6 +98,37 @@ compliance:
       image: { repository: swiftbets-compliance-migrator }
       env: { Migrator__AppLogin: compliance_app, Migrator__EnsureDatabase: "true" }
       secretEnv: { ConnectionStrings__SbCompliance: { key: sb-compliance-migrate } }
+
+# Deposits and withdrawals (E3, D118-D122). The simulator stands in for a real provider until one is contracted.
+payments:
+  enabled: true
+  image: { repository: swiftbets-payments }
+  env:
+    Kafka__ClientId: swiftbets-payments
+    Wallet__GrpcAddress: http://wallet:8081
+    ServiceIdentity__TokenEndpoint: http://identity:8080/auth/token
+    ServiceIdentity__ClientId: payments
+    Payments__Simulator__BaseUrl: http://payments-simulator:8080
+    Payments__DepositProvider: simulator
+  secretEnv:
+    ConnectionStrings__SbPayments: { key: sb-payments }
+    ServiceIdentity__ClientSecret: { key: payments-client-secret }
+    Payments__Simulator__ApiKey: { key: payments-simulator-api-key }
+    Payments__Simulator__WebhookSecrets__0: { key: payments-webhook-secret }
+  migrators:
+    - name: payments-migrator
+      image: { repository: swiftbets-payments-migrator }
+      env: { Migrator__AppLogin: payments_app, Migrator__EnsureDatabase: "true" }
+      secretEnv: { ConnectionStrings__SbPayments: { key: sb-payments-migrate } }
+
+payments-simulator:
+  enabled: true
+  image: { repository: swiftbets-payments-simulator }
+  env:
+    Simulator__WebhookUrl: http://payments:8080/webhooks/simulator
+  secretEnv:
+    Simulator__ApiKey: { key: payments-simulator-api-key }
+    Simulator__WebhookSecret: { key: payments-webhook-secret }
 
 # Sends every customer email from NotificationRequestedV1 (D107).
 notifications:
@@ -197,6 +229,7 @@ gateway:
     Gateway__IdentityAddress: http://identity:8080
     ReverseProxy__Clusters__identity__Destinations__primary__Address: http://identity:8080
     ReverseProxy__Clusters__compliance__Destinations__primary__Address: http://compliance:8080
+    ReverseProxy__Clusters__payments__Destinations__primary__Address: http://payments:8080
 
 # Server-rendered customer pages; the gateway sends /account, /site-assets and /__manifest here (D110).
 site:

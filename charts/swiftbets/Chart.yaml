@@ -14,6 +14,8 @@ dependencies:
   - { name: wallet, version: 0.1.0, repository: file://../wallet }
   - { name: identity, version: 0.1.0, repository: file://../identity, condition: identity.enabled }
   - { name: compliance, version: 0.1.0, repository: file://../compliance, condition: compliance.enabled }
+  - { name: payments, version: 0.1.0, repository: file://../payments, condition: payments.enabled }
+  - { name: payments-simulator, version: 0.1.0, repository: file://../payments-simulator, condition: payments-simulator.enabled }
   - { name: notifications, version: 0.1.0, repository: file://../notifications, condition: notifications.enabled }
   - { name: settlement, version: 0.1.0, repository: file://../settlement }
   - { name: payout, version: 0.1.0, repository: file://../payout }

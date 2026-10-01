@@ -1,0 +1,41 @@
+# Every alert names its runbook in swiftbets-steward/runbooks, which Steward also retrieves.
+groups:
+  - name: payments
+    rules:
+      - alert: PaymentsReconciliationDrift
+        expr: max by (provider) (swiftbets_payments_reconciliation_drifts) > 0
+        labels:
+          severity: critical
+          area: money-path
+        annotations:
+          summary: "Payments reconciliation found {{ $value }} drift(s) with {{ $labels.provider }}"
+          description: "The provider and the ledger disagree about money that moved. A customer may be owed a deposit or a payout may be wrong."
+          runbook: payment-drift
+      - alert: PaymentsReconciliationStale
+        expr: time() - max by (provider) (swiftbets_payments_reconciliation_last_completed_timestamp_seconds) > 93600
+        for: 15m
+        labels:
+          severity: warning
+          area: money-path
+        annotations:
+          summary: "No payments reconciliation with {{ $labels.provider }} has completed in over 26 hours"
+          description: "The daily provider-against-ledger run has not completed; drift would go unnoticed."
+          runbook: payment-drift
+      - alert: PaymentsWebhooksRejected
+        expr: sum by (provider) (increase(swiftbets_payments_webhooks_rejected_total[15m])) > 5
+        labels:
+          severity: warning
+          area: money-path
+        annotations:
+          summary: "{{ $value }} {{ $labels.provider }} webhooks rejected for their signature in 15 minutes"
+          description: "Either the webhook secret was rotated on one side only, or someone is posting forged webhooks. Payments are not being confirmed by webhook; the sweep still finishes them."
+          runbook: payment-drift
+      - alert: PaymentsSweepFailing
+        expr: increase(swiftbets_payments_sweep_failures_total[30m]) > 3
+        labels:
+          severity: warning
+          area: money-path
+        annotations:
+          summary: "The payments sweep or reconciliation keeps failing"
+          description: "Open deposits and withdrawals are not being finished; check the payments logs."
+          runbook: payment-drift

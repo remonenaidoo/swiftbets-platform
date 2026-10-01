@@ -1,0 +1,10 @@
+apiVersion: v2
+name: payments-simulator
+description: A simulated payment provider (deposits and payouts) for environments with no real provider.
+type: application
+version: 0.1.0
+appVersion: main
+dependencies:
+  - name: swiftbets-service
+    version: 0.1.0
+    repository: file://../swiftbets-service

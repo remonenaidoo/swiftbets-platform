@@ -24,5 +24,5 @@ variable "allowed_ip" {
 variable "databases" {
   description = "Betstore databases, one per owning service."
   type        = list(string)
-  default     = ["SbPlacement", "SbWallet", "SbSettlement", "SbPayout", "SbIdentity", "SbCompliance"]
+  default     = ["SbPlacement", "SbWallet", "SbSettlement", "SbPayout", "SbIdentity", "SbCompliance", "SbPayments"]
 }

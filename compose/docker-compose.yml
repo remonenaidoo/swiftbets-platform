@@ -114,6 +114,7 @@ services:
       PAYOUT_DB_PASSWORD: ${PAYOUT_DB_PASSWORD}
       IDENTITY_DB_PASSWORD: ${IDENTITY_DB_PASSWORD}
       COMPLIANCE_DB_PASSWORD: ${COMPLIANCE_DB_PASSWORD}
+      PAYMENTS_DB_PASSWORD: ${PAYMENTS_DB_PASSWORD}
     volumes: ["./sqlserver:/init:ro"]
     networks: [swiftbets]
     depends_on:
@@ -237,6 +238,7 @@ services:
       Identity__LoadTestUserCount: ${LOAD_TEST_USERS:-100}
       Identity__Clients__payout: ${PAYOUT_CLIENT_SECRET:?set PAYOUT_CLIENT_SECRET in .env}
       Identity__Clients__steward: ${STEWARD_CLIENT_SECRET:?set STEWARD_CLIENT_SECRET in .env}
+      Identity__Clients__payments: ${PAYMENTS_CLIENT_SECRET:?set PAYMENTS_CLIENT_SECRET in .env}
       Kafka__ClientId: swiftbets-identity
       AccountEmail__Delivery: Notifications
       AccountEmail__PublicBaseUrl: ${PUBLIC_BASE_URL:-http://127.0.0.1:7100}
@@ -271,6 +273,58 @@ services:
     depends_on:
       compliance-migrator: { condition: service_completed_successfully }
       topics: { condition: service_completed_successfully }
+
+  payments-migrator:
+    <<: *migrator
+    image: ghcr.io/remonenaidoo/swiftbets-payments-migrator:${SWIFTBETS_TAG:-local}
+    build: { context: ../../swiftbets-payments, dockerfile: deploy/SwiftBets.Payments.Migrator.Dockerfile }
+    environment:
+      ConnectionStrings__SbPayments: Server=sqlserver,1433;Database=SbPayments;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True
+      Migrator__EnsureDatabase: "true"
+      Migrator__AppLogin: payments_app
+    depends_on:
+      sqlserver-init: { condition: service_completed_successfully }
+
+  # Deposits and withdrawals through a provider port; the simulator below stands in for a real provider in dev.
+  payments:
+    <<: *dotnet-service
+    image: ghcr.io/remonenaidoo/swiftbets-payments:${SWIFTBETS_TAG:-local}
+    build: { context: ../../swiftbets-payments, dockerfile: deploy/SwiftBets.Payments.Api.Dockerfile }
+    environment:
+      <<: *dotnet-env
+      Jwt__Authority: http://identity:8080
+      Jwt__RequireHttpsMetadata: "false"
+      ConnectionStrings__SbPayments: Server=sqlserver,1433;Database=SbPayments;User Id=payments_app;Password=${PAYMENTS_DB_PASSWORD};TrustServerCertificate=True
+      Kafka__ClientId: swiftbets-payments
+      Wallet__GrpcAddress: http://wallet:8081
+      ServiceIdentity__TokenEndpoint: http://identity:8080/auth/token
+      ServiceIdentity__ClientId: payments
+      ServiceIdentity__ClientSecret: ${PAYMENTS_CLIENT_SECRET}
+      Payments__ReturnUrl: http://127.0.0.1:7100/account/wallet
+      Payments__Simulator__BaseUrl: http://payments-simulator:8080
+      Payments__Simulator__ApiKey: ${PAYMENTS_SIMULATOR_API_KEY}
+      Payments__Simulator__WebhookSecrets__0: ${PAYMENTS_WEBHOOK_SECRET}
+      # Paystack test mode for deposits: set PAYMENTS_DEPOSIT_PROVIDER=paystack and a test secret key.
+      Payments__DepositProvider: ${PAYMENTS_DEPOSIT_PROVIDER:-simulator}
+      Payments__Paystack__SecretKey: ${PAYSTACK_TEST_SECRET_KEY:-}
+    healthcheck: { <<: *dotnet-healthcheck, test: ["CMD", "dotnet", "/app/SwiftBets.Payments.Api.dll", "--healthcheck"] }
+    depends_on:
+      payments-migrator: { condition: service_completed_successfully }
+      topics: { condition: service_completed_successfully }
+
+  # The simulated provider: checkout pages at http://127.0.0.1:7140, signed webhooks back to payments.
+  payments-simulator:
+    <<: *dotnet-service
+    image: ghcr.io/remonenaidoo/swiftbets-payments-simulator:${SWIFTBETS_TAG:-local}
+    build: { context: ../../swiftbets-payments, dockerfile: deploy/SwiftBets.Payments.Simulator.Dockerfile }
+    environment:
+      <<: *dotnet-env
+      Simulator__ApiKey: ${PAYMENTS_SIMULATOR_API_KEY}
+      Simulator__WebhookSecret: ${PAYMENTS_WEBHOOK_SECRET}
+      Simulator__WebhookUrl: http://payments:8080/webhooks/simulator
+      Simulator__PublicUrl: http://127.0.0.1:7140
+    ports: ["127.0.0.1:7140:8080"]
+    healthcheck: { <<: *dotnet-healthcheck, test: ["CMD", "dotnet", "/app/SwiftBets.Payments.Simulator.dll", "--healthcheck"] }
 
   # Catches every account email in dev; the inbox is at http://127.0.0.1:7125.
   mailpit:
@@ -397,6 +451,7 @@ services:
       Identity__LoadTestUserCount: ${LOAD_TEST_USERS:-100}
       Identity__Clients__payout: ${PAYOUT_CLIENT_SECRET:?set PAYOUT_CLIENT_SECRET in .env}
       Identity__Clients__steward: ${STEWARD_CLIENT_SECRET:?set STEWARD_CLIENT_SECRET in .env}
+      Identity__Clients__payments: ${PAYMENTS_CLIENT_SECRET:?set PAYMENTS_CLIENT_SECRET in .env}
       Wallet__GrpcAddress: http://wallet:8081
       ConnectionStrings__SbPlacement: Server=sqlserver,1433;Database=SbPlacement;User Id=placement_app;Password=${PLACEMENT_DB_PASSWORD};TrustServerCertificate=True
       ConnectionStrings__Redis: redis:6379
@@ -538,6 +593,7 @@ services:
       Gateway__IdentityAddress: http://identity:8080
       ReverseProxy__Clusters__identity__Destinations__primary__Address: http://identity:8080
       ReverseProxy__Clusters__compliance__Destinations__primary__Address: http://compliance:8080
+      ReverseProxy__Clusters__payments__Destinations__primary__Address: http://payments:8080
       # Open preview: sign visitors in as this demo account automatically. Off when empty.
       Gateway__DemoSignIn__Username: ${GATEWAY_DEMO_SIGN_IN_USER:-}
       Gateway__DemoSignIn__PunterUsername: ${GATEWAY_DEMO_SIGN_IN_PUNTER:-}

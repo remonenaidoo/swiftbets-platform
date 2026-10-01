@@ -14,6 +14,7 @@ scrape_configs:
           - placement:8080
           - identity:8080
           - compliance:8080
+          - payments:8080
           - notifications:8080
           - wallet:8080
           - settlement:8080
