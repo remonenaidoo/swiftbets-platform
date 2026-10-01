@@ -575,3 +575,8 @@ A non-idempotent call is retried only when it carries an idempotency key.
 - A reference only one side lists for the day is looked up on the other side before it counts, so a payment that settles either side of midnight is not drift.
 - Drifts are stored, exported as `swiftbets_payments_reconciliation_drifts` (alert `PaymentsReconciliationDrift`), and published as `payments.drift-detected.v1`. Steward opens one `PaymentDrift` incident per provider and day, with the `payment-drift` runbook; remediation stays manual.
 - `SbPayments` is the seventh free-offer database (D115).
+
+**D123. The site hands deposits to the provider's hosted checkout; the console decides held withdrawals.**
+- The deposit form posts to the site, which redirects to the provider's checkout. The site's CSP `form-action` lists those origins from `CHECKOUT_ORIGINS` (default Paystack checkout; the simulator locally), so the redirect also works without JavaScript. Card details never touch SwiftBets.
+- Ops and Admin get `payments.read` and `payments.approve` (identity migration 0007). The console's Finance view shows the approval queue and the latest run per provider.
+- Local clusters request 20m CPU per service so the whole platform fits one kind node; production values are unchanged.
