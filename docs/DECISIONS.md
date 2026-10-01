@@ -518,3 +518,11 @@ A non-idempotent call is retried only when it carries an idempotency key.
 **D110. The server-rendered site runs beside the mobile web export until it serves every page.**
 - Its image is `swiftbets-site`, because `swiftbets-web` is already the export's package and a new repository cannot publish to it.
 - The gateway sends `/account/*`, `/site-assets/*` and `/__manifest` to `site`; everything else still reaches `web`. Each page moves as the site gains it, then the catch-all flips and the export retires (ADR 0003).
+
+**D111. Placement drops its `auth` schema one release after the identity cut-over, not in E1.**
+- Migrator Jobs run in parallel in Kubernetes, so a drop in the same release could run before identity's import on an existing install.
+- Identity's import now skips when placement holds no `auth` tables. Placement `0003` (drop, with a rollback that recreates the tables empty) ships with the first E2 placement release, after staging has run the import.
+
+**D112. The audit writer ships with the audit service in E2, not in E1 shared tooling.**
+- E1 has no consumer of `AuditRecordedV1`; writing the helper beside its first reader (compliance) avoids guessing its shape.
+- It lands in building-blocks 0.6.0 alongside contracts 0.6.0.
