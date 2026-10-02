@@ -82,6 +82,8 @@ jobs:
         run: swiftbets-platform/scripts/gate-e3.sh
       - name: Gate E4 (kill switch, system bets)
         run: swiftbets-platform/scripts/gate-e4.sh
+      - name: Gate E4b (manual results)
+        run: swiftbets-platform/scripts/gate-e4b.sh
       - name: Diagnostics
         if: failure()
         run: |
