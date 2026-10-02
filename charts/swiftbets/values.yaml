@@ -76,6 +76,7 @@ identity:
     Identity__Clients__steward: { key: steward-client-secret }
     Identity__Clients__payments: { key: payments-client-secret }
     Identity__Clients__placement: { key: placement-client-secret }
+    Identity__Clients__cashout: { key: cashout-client-secret }
     Identity__SigningKeyPem: { key: identity-signing-key }
   migrators:
     - name: identity-migrator
@@ -168,6 +169,19 @@ bethistory:
       image: { repository: swiftbets-history-migrator }
       secretEnv: { ConnectionStrings__SbHistory: { key: sb-history } }
 
+# Cashout: stateless quotes at live odds, executed through settlement's final-state lock over gRPC.
+cashout:
+  enabled: true
+  image: { repository: swiftbets-cashout }
+  env:
+    Clients__SettlementGrpcAddress: http://settlement:8081
+    Clients__OfferAddress: http://offer:8080
+    ServiceIdentity__TokenEndpoint: http://identity:8080/auth/token
+    ServiceIdentity__ClientId: cashout
+  secretEnv:
+    ServiceIdentity__ClientSecret: { key: cashout-client-secret }
+    Cashout__SigningKey: { key: cashout-signing-key }
+
 wallet:
   image: { repository: swiftbets-wallet }
   grpcPort: 8081
@@ -186,6 +200,7 @@ wallet:
 
 settlement:
   image: { repository: swiftbets-settlement }
+  grpcPort: 8081
   env:
     Kafka__ClientId: swiftbets-settlement
     ConnectionStrings__Redis: redis:6379

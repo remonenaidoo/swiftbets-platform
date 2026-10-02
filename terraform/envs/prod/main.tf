@@ -44,9 +44,14 @@ resource "random_password" "db" {
 }
 
 resource "random_password" "client" {
-  for_each = toset(["payout", "steward", "demo", "payments", "payments-simulator", "payments-webhook", "placement"])
+  for_each = toset(["payout", "steward", "demo", "payments", "payments-simulator", "payments-webhook", "placement", "cashout"])
   length   = 32
   special  = false
+}
+
+# HMAC key for cashout quote tokens: 32 random bytes, base64.
+resource "random_id" "cashout_signing" {
+  byte_length = 32
 }
 
 # The identity service's RS256 signing key: stable across restarts and shared by every replica.
@@ -78,6 +83,8 @@ resource "kubernetes_secret_v1" "swiftbets" {
       "steward-client-secret"      = random_password.client["steward"].result
       "payments-client-secret"     = random_password.client["payments"].result
       "placement-client-secret"    = random_password.client["placement"].result
+      "cashout-client-secret"      = random_password.client["cashout"].result
+      "cashout-signing-key"        = random_id.cashout_signing.b64_std
       "payments-simulator-api-key" = random_password.client["payments-simulator"].result
       "payments-webhook-secret"    = random_password.client["payments-webhook"].result
       "steward-db-password"        = random_password.db["steward"].result
