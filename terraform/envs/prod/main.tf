@@ -18,7 +18,7 @@ provider "helm" {
 
 locals {
   install  = var.kubeconfig_path != ""
-  services = ["placement", "wallet", "settlement", "payout", "identity", "compliance", "payments"]
+  services = ["placement", "wallet", "settlement", "payout", "identity", "compliance", "payments", "casino"]
 }
 
 module "oci" {
@@ -38,13 +38,13 @@ module "azure_sql" {
 }
 
 resource "random_password" "db" {
-  for_each = toset(concat(local.services, ["steward", "history", "notifications", "config", "catalog", "postgres"]))
+  for_each = toset(concat(local.services, ["steward", "history", "notifications", "config", "catalog", "casino-catalog", "postgres"]))
   length   = 32
   special  = false
 }
 
 resource "random_password" "client" {
-  for_each = toset(["payout", "steward", "demo", "payments", "payments-simulator", "payments-webhook", "placement", "cashout", "history"])
+  for_each = toset(["payout", "steward", "demo", "payments", "payments-simulator", "payments-webhook", "placement", "cashout", "history", "casino", "casino-sim-seamless", "casino-sim-transfer"])
   length   = 32
   special  = false
 }
@@ -84,6 +84,9 @@ resource "kubernetes_secret_v1" "swiftbets" {
       "payments-client-secret"     = random_password.client["payments"].result
       "placement-client-secret"    = random_password.client["placement"].result
       "cashout-client-secret"      = random_password.client["cashout"].result
+      "casino-client-secret"       = random_password.client["casino"].result
+      "casino-sim-seamless-secret" = random_password.client["casino-sim-seamless"].result
+      "casino-sim-transfer-secret" = random_password.client["casino-sim-transfer"].result
       "history-client-secret"      = random_password.client["history"].result
       "cashout-signing-key"        = random_id.cashout_signing.b64_std
       "payments-simulator-api-key" = random_password.client["payments-simulator"].result
@@ -93,11 +96,13 @@ resource "kubernetes_secret_v1" "swiftbets" {
       "notifications-db-password"  = random_password.db["notifications"].result
       "config-db-password"         = random_password.db["config"].result
       "catalog-db-password"        = random_password.db["catalog"].result
+      "casino-catalog-db-password" = random_password.db["casino-catalog"].result
       "sb-steward"                 = "Host=postgres;Database=sb_steward;Username=steward_app;Password=${random_password.db["steward"].result}"
       "sb-history"                 = "Host=postgres;Database=sb_history;Username=history_app;Password=${random_password.db["history"].result}"
       "sb-notifications"           = "Host=postgres;Database=sb_notifications;Username=notifications_app;Password=${random_password.db["notifications"].result}"
       "sb-config"                  = "Host=postgres;Database=sb_config;Username=config_app;Password=${random_password.db["config"].result}"
       "sb-catalog"                 = "Host=postgres;Database=sb_catalog;Username=catalog_app;Password=${random_password.db["catalog"].result}"
+      "sb-casino-catalog"          = "Host=postgres;Database=sb_casino;Username=casino_catalog_app;Password=${random_password.db["casino-catalog"].result}"
       "anthropic-api-key"          = var.anthropic_api_key
       "identity-signing-key"       = tls_private_key.identity.private_key_pem
     },

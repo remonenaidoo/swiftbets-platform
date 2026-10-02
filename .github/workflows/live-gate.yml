@@ -84,6 +84,8 @@ jobs:
         run: swiftbets-platform/scripts/gate-e4.sh
       - name: Gate E4b (manual results)
         run: swiftbets-platform/scripts/gate-e4b.sh
+      - name: Gate E5 (casino)
+        run: swiftbets-platform/scripts/gate-e5.sh
       - uses: actions/setup-dotnet@v6
         with: { dotnet-version: 10.0.x }
       - name: Gate E4b (real-feed contract tests)

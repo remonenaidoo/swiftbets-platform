@@ -114,3 +114,10 @@ topics:
   - name: swiftbets.trading.market-status-changed.v1
   - name: swiftbets.trading.market-status-changed.v1.dlq
     retention.ms: 2592000000
+  # Casino (E5): every applied provider callback, kept a year for reconciliation and audit.
+  - name: swiftbets.casino.transaction.v1
+    retention.ms: 31536000000
+  - name: swiftbets.casino.transaction.v1.dlq
+    retention.ms: 2592000000
+  - name: swiftbets.casino.provider-reconciliation.v1
+    retention.ms: 31536000000

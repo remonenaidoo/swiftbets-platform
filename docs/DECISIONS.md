@@ -671,3 +671,22 @@ A non-idempotent call is retried only when it carries an idempotency key.
 **D141. Traders can look up what became of a manual result; drills publish results in a chosen order.**
 - Offer consumes `ManualResultRejectedV1` and serves `GET /admin/trading/manual-results/{id}` with every coupon settlement refused to change and why; the console's live log stays the real-time view.
 - `POST /admin/trading/drills/results` publishes a feed result at a chosen version, mapped only where fault injection is on (compose and the live gate; production refuses it). The E4b gate uses it for out-of-order resettlement and the cashout race.
+
+**D142. The casino is one repo with three hosts: gateway, catalogue and simulated providers.**
+- The gateway moves money and owns regulated state, so it uses SQL Server `SbCasino`. Its tables are sessions (only a SHA-256 of each token is stored), transactions (unique on provider and provider transaction id), free-spin grants and reconciliation runs.
+- The catalogue is a read model in its own Postgres database `sb_casino`, not offer's `sb_catalog`. One database per owning service keeps migrations and grants separate.
+- The two simulated providers (seamless wallet and transfer wallet) stand in for real aggregators, which issue sandboxes only under a commercial agreement (C1).
+
+**D143. Providers authenticate every wallet call with an HMAC of the raw body; each callback is applied once.**
+- `X-Provider-Signature` is a lower-case hex HMAC-SHA256 of the raw body under the provider's own secret, checked in constant time before the body is parsed.
+- The provider's transaction id is the idempotency key and the wallet's posting key (`casino:{provider}:{ptx}`). A duplicate returns the original result and moves no money.
+- A rollback for a bet never seen is stored and accepted with amount zero. If that bet arrives later it is refused (`bet_rolled_back`), so a reordered pair can never take the stake.
+
+**D144. Casino launch fails closed on restrictions, and game pages load through the public origin.**
+- Launch reads the compacted `compliance.restrictions-changed` topic. An active self-exclusion, cooling-off or no-betting restriction refuses it with `casino_restricted`. Until the topic has loaded, launch refuses with `restrictions_unavailable` rather than guessing.
+- Browsers reach the simulator only at `/casino-sim/*` through the gateway, so game pages share the site's origin. The site frames only a session it launched itself, and the frame is sandboxed.
+
+**D145. Casino launch asks compliance directly; the topic is only a fast path to refuse.**
+- The E5 gate showed a customer could launch a game in the moment after taking a break, before the compacted topic delivered it. Refusing play has to be strongly consistent.
+- Launch refuses at once if the topic already holds a blocking restriction. Otherwise it calls compliance's service-only `GET /internal/users/{id}/restrictions`, with a 3 second timeout. Any failure to get an answer refuses with `restrictions_unavailable`, so a compliance outage stops casino launches, not safer-gambling checks.
+- A break also ends the customer's sessions. The gate accepts either outcome: sign-in refused, or launch refused with `casino_restricted`. It fails only if a game opens.
