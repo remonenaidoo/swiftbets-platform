@@ -605,3 +605,23 @@ A non-idempotent call is retried only when it carries an idempotency key.
 - Why: the E4 core is what later epics depend on; the rest is a separate slice with its own owner decision (the feed provider key). Closing a working, gated slice is better than leaving the epic half open.
 - E4b reverts to E4 if the owner prefers a single epic; nothing built depends on the split.
 
+
+**D128. A time-void never guesses a placement time.**
+- Settlement stores each coupon's placement time from 0004 onwards; a time-void voids legs on coupons placed at or after the trader's cut-off.
+- Coupons indexed before 0004 have no stored time. They are left alone, counted and logged, so a trader can void them by coupon if needed. Voiding them on a guess could void bets placed fairly before the event.
+
+**D129. A cashout is a settlement, paid on the normal path.**
+- Settlement's `CashOut` takes the coupon lock and sets a final state. It then writes the next settlement version with outcome `CashedOut` at the agreed amount, and publishes it like any other; payout pays the delta under a `CASHOUT` key. There is no second money path.
+- The final state is enforced twice. In SQL, the settler refuses a final coupon under its lock. In Redis, the progress script stops counting evaluations once the coupon's final flag is set.
+- A manual result touching a cashed-out coupon publishes `ManualResultRejectedV1` (`coupon_cashed_out`) and changes nothing. A cashout racing a late result yields exactly one settlement: whichever commits first under the lock decides.
+- Consumers of settlements moved to contracts 1.2.0 before settlement could emit `CashedOut`.
+
+**D130. Cashout quotes are stateless tokens; execute pays the quote within a leeway.**
+- The token is an HMAC-SHA256 over the quote id, coupon, punter, amount, currency and issue time, with a 10-second max age; verification is constant-time.
+- Live prices are not in the token, unlike the blueprint's wording: execute reprices at live odds anyway, so the signed amount is what needs protecting.
+- Execute pays the quoted amount if the live value is no more than 2% below it; otherwise it refuses with a fresh quote. The quote id is the cashout id, so a retried execute pays once.
+- v1 cashes out singles and accumulators only (one bet, one line); system bets are refused with `not_single_line`.
+- Price: stake × Π(won placed odds) × Π(open placed ÷ live odds) × (1 − 5% margin), void legs at 1.00, capped at the potential payout, rounded down.
+
+**D131. Payout refuses an outcome it does not know.**
+- An unknown coupon outcome now throws, so the attempt retries and dead-letters, instead of being treated as a loss. Treating it as a loss would have clawed money back from a `CashedOut` settlement.

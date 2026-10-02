@@ -19,6 +19,7 @@ dependencies:
   - { name: notifications, version: 0.1.0, repository: file://../notifications, condition: notifications.enabled }
   - { name: config, version: 0.1.0, repository: file://../config, condition: config.enabled }
   - { name: bethistory, version: 0.1.0, repository: file://../bethistory, condition: bethistory.enabled }
+  - { name: cashout, version: 0.1.0, repository: file://../cashout, condition: cashout.enabled }
   - { name: settlement, version: 0.1.0, repository: file://../settlement }
   - { name: payout, version: 0.1.0, repository: file://../payout }
   - { name: steward, version: 0.1.0, repository: file://../steward }

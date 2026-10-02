@@ -241,6 +241,7 @@ services:
       Identity__Clients__steward: ${STEWARD_CLIENT_SECRET:?set STEWARD_CLIENT_SECRET in .env}
       Identity__Clients__payments: ${PAYMENTS_CLIENT_SECRET:?set PAYMENTS_CLIENT_SECRET in .env}
       Identity__Clients__placement: ${PLACEMENT_CLIENT_SECRET:?set PLACEMENT_CLIENT_SECRET in .env}
+      Identity__Clients__cashout: ${CASHOUT_CLIENT_SECRET:?set CASHOUT_CLIENT_SECRET in .env}
       Kafka__ClientId: swiftbets-identity
       AccountEmail__Delivery: Notifications
       AccountEmail__PublicBaseUrl: ${PUBLIC_BASE_URL:-http://127.0.0.1:7100}
@@ -437,6 +438,26 @@ services:
     depends_on:
       history-migrator: { condition: service_completed_successfully }
       topics: { condition: service_completed_successfully }
+
+  # Cashout: stateless quotes at live odds; execute goes through settlement's final-state lock over gRPC.
+  cashout:
+    <<: *dotnet-service
+    image: ghcr.io/remonenaidoo/swiftbets-cashout:${SWIFTBETS_TAG:-local}
+    build: { context: ../../swiftbets-cashout, dockerfile: deploy/SwiftBets.Cashout.Api.Dockerfile }
+    environment:
+      <<: *dotnet-env
+      Jwt__Authority: http://identity:8080
+      Jwt__RequireHttpsMetadata: "false"
+      Clients__SettlementGrpcAddress: http://settlement:8081
+      Clients__OfferAddress: http://offer:8080
+      ServiceIdentity__TokenEndpoint: http://identity:8080/auth/token
+      ServiceIdentity__ClientId: cashout
+      ServiceIdentity__ClientSecret: ${CASHOUT_CLIENT_SECRET}
+      Cashout__SigningKey: ${CASHOUT_SIGNING_KEY:?set CASHOUT_SIGNING_KEY in .env}
+    healthcheck: { <<: *dotnet-healthcheck, test: ["CMD", "dotnet", "/app/SwiftBets.Cashout.Api.dll", "--healthcheck"] }
+    depends_on:
+      settlement: { condition: service_healthy }
+      offer: { condition: service_healthy }
 
   # Sends every customer email from NotificationRequestedV1; Mailpit catches it in dev.
   notifications:
