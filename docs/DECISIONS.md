@@ -685,3 +685,8 @@ A non-idempotent call is retried only when it carries an idempotency key.
 **D144. Casino launch fails closed on restrictions, and game pages load through the public origin.**
 - Launch reads the compacted `compliance.restrictions-changed` topic. An active self-exclusion, cooling-off or no-betting restriction refuses it with `casino_restricted`. Until the topic has loaded, launch refuses with `restrictions_unavailable` rather than guessing.
 - Browsers reach the simulator only at `/casino-sim/*` through the gateway, so game pages share the site's origin. The site frames only a session it launched itself, and the frame is sandboxed.
+
+**D145. Casino launch asks compliance directly; the topic is only a fast path to refuse.**
+- The E5 gate showed a customer could launch a game in the moment after taking a break, before the compacted topic delivered it. Refusing play has to be strongly consistent.
+- Launch refuses at once if the topic already holds a blocking restriction. Otherwise it calls compliance's service-only `GET /internal/users/{id}/restrictions`, with a 3 second timeout. Any failure to get an answer refuses with `restrictions_unavailable`, so a compliance outage stops casino launches, not safer-gambling checks.
+- A break also ends the customer's sessions. The gate accepts either outcome: sign-in refused, or launch refused with `casino_restricted`. It fails only if a game opens.
