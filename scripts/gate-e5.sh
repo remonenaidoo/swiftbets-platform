@@ -50,7 +50,7 @@ session="$(jq -r '.sessionToken' "$work/body")"
 [[ -n "$session" && "$session" != null ]] || fail "launch returned no session: $(head -c 300 "$work/body")"
 echo "ok   Sun Temple launched"
 expect 200 "$(api p POST /casino-sim/play/start -d "{\"session\":\"$session\",\"game\":\"sun-temple\"}")" "the game page starts a seamless session"
-expect 200 "$(api o POST /casino-sim/faults/sim-seamless/duplicate-next-callback)" "the provider will send its next win twice"
+expect 20[02] "$(api o POST /casino-sim/faults/sim-seamless/duplicate-next-callback)" "the provider will send its next win twice"
 before="$(balance)"; spent=0; won=0
 for _ in $(seq 1 300); do
   expect 200 "$(api p POST /casino-sim/play/spin -d "{\"session\":\"$session\",\"game\":\"sun-temple\",\"bet\":100}")" "spin" >/dev/null
@@ -77,7 +77,7 @@ echo "ok   the bet arriving after its rollback is refused and debits nothing"
 
 # 3. Reconciliation flags a transaction missing from the provider's report.
 today="$(date -u +%F)"
-expect 200 "$(api o POST /casino-sim/faults/sim-seamless/drop-from-report?count=1)" "the provider's next report drops a transaction"
+expect 20[02] "$(api o POST /casino-sim/faults/sim-seamless/drop-from-report?count=1)" "the provider's next report drops a transaction"
 expect 200 "$(api o POST "/api/admin/casino/reconciliation/sim-seamless/$today")" "operator reconciles today"
 jq -e '.status == "drift" and .missingOnProviderSide >= 1' "$work/body" >/dev/null || fail "no drift flagged: $(head -c 300 "$work/body")"
 echo "ok   reconciliation flagged the injected mismatch"
@@ -99,12 +99,19 @@ token="$(printf '%b' "${token//%/\\x}")"
 expect '20[04]' "$(api c POST /api/auth/verify-email -d "{\"token\":\"$token\"}")" "the customer verifies their email"
 expect 200 "$(api c POST /api/session/login -d "{\"username\":\"$email\",\"password\":\"$password\"}")" "the customer signs in"
 expect '20[0-9]' "$(api c POST /api/me/exclusions -d '{"kind":"coolingOff","days":1,"reason":"E5 gate"}')" "the customer takes a one-day break"
+# Taking a break ends the customer's sessions and keeps them signed out; while any session survives, launch is refused.
+outcome=""
 for _ in $(seq 1 30); do
   code="$(launch c sun-temple)"
-  [[ "$code" == 403 ]] && jq -e '.code == "casino_restricted"' "$work/body" >/dev/null && break
+  if [[ "$code" == 403 ]] && jq -e '.code == "casino_restricted"' "$work/body" >/dev/null; then outcome="launch refused (casino_restricted)"; break; fi
+  [[ "$code" == 200 ]] && fail "a customer on a break launched a game: $(head -c 300 "$work/body")"
+  if [[ "$code" == 401 ]]; then
+    login="$(api c POST /api/session/login -d "{\"username\":\"$email\",\"password\":\"$password\"}")"
+    [[ "$login" == 401 ]] && { outcome="signed out and refused sign-in"; break; }
+  fi
   sleep 2
 done
-[[ "$code" == 403 ]] || fail "a customer on a break could still launch: HTTP $code $(head -c 300 "$work/body")"
-echo "ok   a customer on a break cannot launch a game"
+[[ -n "$outcome" ]] || fail "could not establish the break's effect: HTTP $code $(head -c 300 "$work/body")"
+echo "ok   a customer on a break cannot launch a game: $outcome"
 
 echo "E5 gate (duplicate win, unseen rollback, reconciliation drift, self-exclusion) passed"

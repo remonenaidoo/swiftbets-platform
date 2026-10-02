@@ -195,6 +195,7 @@ casino:
     ServiceIdentity__ClientId: casino
     Casino__Providers__sim-seamless__LaunchBaseUrl: http://localhost:7100/casino-sim
     Casino__Providers__sim-transfer__LaunchBaseUrl: http://localhost:7100/casino-sim
+    Clients__ComplianceAddress: http://compliance:8080
     Casino__Providers__sim-seamless__ReportUrl: http://casino-sim:8080/reports
     Casino__Providers__sim-transfer__ReportUrl: http://casino-sim:8080/reports
   secretEnv:

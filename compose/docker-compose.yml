@@ -554,6 +554,7 @@ services:
       Casino__Providers__sim-seamless__LaunchBaseUrl: ${PUBLIC_ORIGIN:-http://localhost:7100}/casino-sim
       Casino__Providers__sim-transfer__Secret: ${CASINO_SIM_TRANSFER_SECRET}
       Casino__Providers__sim-transfer__LaunchBaseUrl: ${PUBLIC_ORIGIN:-http://localhost:7100}/casino-sim
+      Clients__ComplianceAddress: http://compliance:8080
       Casino__Providers__sim-seamless__ReportUrl: http://casino-sim:8080/reports
       Casino__Providers__sim-transfer__ReportUrl: http://casino-sim:8080/reports
     healthcheck: { <<: *dotnet-healthcheck, test: ["CMD", "dotnet", "/app/SwiftBets.Casino.Gateway.Api.dll", "--healthcheck"] }
