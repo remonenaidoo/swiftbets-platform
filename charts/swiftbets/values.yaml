@@ -83,6 +83,7 @@ identity:
     Identity__Clients__payments: { key: payments-client-secret }
     Identity__Clients__placement: { key: placement-client-secret }
     Identity__Clients__cashout: { key: cashout-client-secret }
+    Identity__Clients__casino: { key: casino-client-secret }
     Identity__Clients__bethistory: { key: history-client-secret }
     Identity__SigningKeyPem: { key: identity-signing-key }
   migrators:
@@ -182,6 +183,28 @@ bethistory:
     - name: history-migrator
       image: { repository: swiftbets-history-migrator }
       secretEnv: { ConnectionStrings__SbHistory: { key: sb-history } }
+
+# Casino gateway (E5): launch, the providers' signed wallet API, free spins, reconciliation.
+casino:
+  enabled: true
+  image: { repository: swiftbets-casino }
+  env:
+    Kafka__ClientId: swiftbets-casino
+    Wallet__GrpcAddress: http://wallet:8081
+    ServiceIdentity__TokenEndpoint: http://identity:8080/auth/token
+    ServiceIdentity__ClientId: casino
+    Casino__Providers__sim-seamless__LaunchBaseUrl: http://localhost:7100/casino-sim
+    Casino__Providers__sim-transfer__LaunchBaseUrl: http://localhost:7100/casino-sim
+  secretEnv:
+    ConnectionStrings__SbCasino: { key: sb-casino }
+    ServiceIdentity__ClientSecret: { key: casino-client-secret }
+    Casino__Providers__sim-seamless__Secret: { key: casino-sim-seamless-secret }
+    Casino__Providers__sim-transfer__Secret: { key: casino-sim-transfer-secret }
+  migrators:
+    - name: casino-migrator
+      image: { repository: swiftbets-casino-migrator }
+      env: { Migrator__AppLogin: casino_app, Migrator__EnsureDatabase: "true" }
+      secretEnv: { ConnectionStrings__SbCasino: { key: sb-casino-migrate } }
 
 # Cashout: stateless quotes at live odds, executed through settlement's final-state lock over gRPC.
 cashout:

@@ -1,0 +1,10 @@
+apiVersion: v2
+name: casino
+description: Casino gateway - launch sessions, the providers' signed seamless and transfer wallet API, free spins and daily provider reconciliation.
+type: application
+version: 0.1.0
+appVersion: main
+dependencies:
+  - name: swiftbets-service
+    version: 0.1.0
+    repository: file://../swiftbets-service
