@@ -134,6 +134,7 @@ services:
       CONFIG_DB_PASSWORD: ${CONFIG_DB_PASSWORD}
       CATALOG_DB_PASSWORD: ${CATALOG_DB_PASSWORD}
       CASINO_CATALOG_DB_PASSWORD: ${CASINO_CATALOG_DB_PASSWORD}
+      RISK_DB_PASSWORD: ${RISK_DB_PASSWORD}
     ports: ["127.0.0.1:7134:5432"]
     volumes:
       - postgres:/var/lib/postgresql/data
@@ -400,6 +401,7 @@ services:
       CONFIG_DB_PASSWORD: ${CONFIG_DB_PASSWORD}
       CATALOG_DB_PASSWORD: ${CATALOG_DB_PASSWORD}
       CASINO_CATALOG_DB_PASSWORD: ${CASINO_CATALOG_DB_PASSWORD}
+      RISK_DB_PASSWORD: ${RISK_DB_PASSWORD}
     volumes: ["./postgres:/provision:ro"]
     networks: [swiftbets]
     depends_on:
@@ -758,6 +760,16 @@ services:
       topics: { condition: service_completed_successfully }
       redis: { condition: service_healthy }
 
+  risk-migrator:
+    <<: *migrator
+    image: ghcr.io/remonenaidoo/swiftbets-risk-migrator:${SWIFTBETS_TAG:-local}
+    build: { context: ../../swiftbets-risk, dockerfile: deploy/SwiftBets.Risk.Migrator.Dockerfile }
+    environment:
+      ConnectionStrings__SbRisk: Host=postgres;Database=sb_risk;Username=risk_app;Password=${RISK_DB_PASSWORD}
+    depends_on:
+      postgres-provision: { condition: service_completed_successfully }
+
+  # Liability per fixture (one actor each), exposure limits for placement, betting-pattern alerts and the trader API.
   risk:
     <<: *dotnet-service
     image: ghcr.io/remonenaidoo/swiftbets-risk:${SWIFTBETS_TAG:-local}
@@ -765,9 +777,15 @@ services:
     environment:
       <<: *dotnet-env
       Kafka__ClientId: swiftbets-risk
+      Jwt__Authority: http://identity:8080
+      Jwt__RequireHttpsMetadata: "false"
+      ConnectionStrings__SbRisk: Host=postgres;Database=sb_risk;Username=risk_app;Password=${RISK_DB_PASSWORD}
+      # Small enough that the E8 gate's restart recovers from a snapshot and replays the journal after it.
+      Risk__SnapshotEvery: "10"
     healthcheck: { <<: *dotnet-healthcheck, test: ["CMD", "dotnet", "/app/SwiftBets.Risk.Worker.dll", "--healthcheck"] }
     depends_on:
       topics: { condition: service_completed_successfully }
+      risk-migrator: { condition: service_completed_successfully }
 
   gateway:
     <<: *dotnet-service

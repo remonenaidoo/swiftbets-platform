@@ -322,6 +322,14 @@ risk:
   image: { repository: swiftbets-risk }
   env:
     Kafka__ClientId: swiftbets-risk
+    Jwt__Authority: http://identity:8080
+    Jwt__RequireHttpsMetadata: "false"
+  secretEnv:
+    ConnectionStrings__SbRisk: { key: sb-risk }
+  migrators:
+    - name: risk-migrator
+      image: { repository: swiftbets-risk-migrator }
+      secretEnv: { ConnectionStrings__SbRisk: { key: sb-risk } }
 
 gateway:
   image: { repository: swiftbets-gateway }

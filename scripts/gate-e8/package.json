@@ -1,0 +1,6 @@
+{
+  "name": "swiftbets-gate-e8",
+  "private": true,
+  "type": "module",
+  "dependencies": { "@microsoft/signalr": "10.0.11" }
+}

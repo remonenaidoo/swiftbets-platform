@@ -52,6 +52,8 @@ spec:
               valueFrom: { secretKeyRef: { name: {{ .Values.secretName }}, key: catalog-db-password } }
             - name: CASINO_CATALOG_DB_PASSWORD
               valueFrom: { secretKeyRef: { name: {{ .Values.secretName }}, key: casino-catalog-db-password } }
+            - name: RISK_DB_PASSWORD
+              valueFrom: { secretKeyRef: { name: {{ .Values.secretName }}, key: risk-db-password } }
           readinessProbe:
             exec: { command: ["pg_isready", "-U", "postgres"] }
             periodSeconds: 5
