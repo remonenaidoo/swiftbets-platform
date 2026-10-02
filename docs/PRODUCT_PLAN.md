@@ -314,7 +314,7 @@ Semver applies to the **package**. A new event type on a new topic is additive (
 | 0.6.0 | E2 | `LimitChangedV1`, `RestrictionsChangedV1` (compacted), `SelfExclusionStartedV1`, `KycStatusChangedV1` | minor |
 | 0.7.0 | E3 | Payment events (`DepositInitiatedV1`, `DepositConfirmedV1`, `WithdrawalRequestedV1`, `WithdrawalCompletedV1`); `swiftbets.wallet.v2` proto (accounts per user and currency, bonus bucket, deposit headroom, statement); `WalletActivityV1` with idempotency key | minor |
 | **1.0.0** | E4 | Envelope gains a required `context` (brand, country, channel). `CouponPlacedV2`/`CouponSettledV2` (bets[], bankers, system), config topics, manual result events, cashout gRPC proto. V1 coupon types stay | **major** (envelope) |
-| **2.0.0** | E4 gate | Remove `CouponPlacedV1`, `CouponSettledV1` and `swiftbets.wallet.v1` once no consumer or open coupon uses them | **major** |
+| **2.0.0** | E4b gate | Remove `CouponPlacedV1`, `CouponSettledV1` and `swiftbets.wallet.v1` once no consumer or open coupon uses them | **major** |
 | 2.1.0 | E5 | Casino round and transaction events; provider reconciliation events | minor |
 | 2.2.0 | E8 | `ExposureLimitsChangedV1` (compacted), `LiabilityChangedV1`, `RiskAlertV1` | minor |
 | 2.3.0 | E9 | Warehouse export and notification-delivery events | minor |
@@ -384,6 +384,9 @@ Effort is focused build days. Every gate includes:
 
 #### E4 Sportsbook completion (24-30 d)
 
+> **Split by D127.** E4 closed on features 1-3 with a green `live-gate` run. Features 4-9, contracts 2.0.0 and the remaining gate items moved to **E4b** below, which runs before E5.
+
+
 - **Features:**
   1. **Bet model V2:** bankers and system bets through placement, settlement, payout and history; contracts 1.0.0 with dual publish.
   2. **Bet-history extraction** with customer, admin and back-office APIs, open-bet lookups and an integrity job against the transactional stores.
@@ -400,6 +403,16 @@ Effort is focused build days. Every gate includes:
   - a Trixie with a banker settles correctly from out-of-order results and resettles on a correction;
   - a cashout during a late result pays exactly once;
   - the kill switch stops placement within 5 seconds;
+  - a trader voids a market from the console and sees an explicit rejection for a cashed-out bet;
+  - the real-feed adapter passes contract tests on recorded responses.
+
+#### E4b Sportsbook trading, cashout and web (D127)
+
+- **Features:** E4 features 4-9 unchanged (admin gateway with manual results, cashout, feed adapter, in-play seams, web sportsbook, agency mode as a cut candidate), plus the cross-store bet-history integrity check.
+- **Contracts:** 1.1.0 (manual results, market suspension, cashout proto); 2.0.0 removes `CouponPlacedV1`, `CouponSettledV1` and `swiftbets.wallet.v1` once payout and bet history read V2.
+- **Gate (`gate-e4b.sh` in `live-gate`):**
+  - a Trixie with a banker resettles correctly through the stack from out-of-order results and a correction;
+  - a cashout during a late result pays exactly once;
   - a trader voids a market from the console and sees an explicit rejection for a cashed-out bet;
   - the real-feed adapter passes contract tests on recorded responses.
 
@@ -508,7 +521,7 @@ Feature "registration with age gate and email verification" (notifications skele
 1. **Payment provider for the real test-mode adapter (blocks E3).**
    - **Default:** Stripe test mode for deposits and refunds (signed webhooks, idempotency keys, documented test matrix); the in-repo simulator for withdrawals.
    - **Alternative:** a South African gateway's public sandbox (PayFast), for local relevance but weaker refund and payout APIs.
-2. **Real feed provider and key (blocks E4 feature 6).**
+2. **Real feed provider and key (blocks E4b feature 6).**
    - **Default:** API-Football free tier (fixtures, pre-match odds and results from one source, so no cross-provider id mapping), used only in staging behind a flag; replay stays the dev default.
    - **Needs from you:** an API key in the environment's secrets.
 3. **Environments and secret store (blocks E1 feature 8).**

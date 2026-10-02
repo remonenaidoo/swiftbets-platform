@@ -599,3 +599,9 @@ A non-idempotent call is retried only when it carries an idempotency key.
 - Customers read `/me/coupons` (and one coupon) through the gateway; operators look up any punter's coupons under `/admin/history`. Placement keeps its copy read-only (`History:RunProjector=false`) until its History projects are removed.
 - History still projects `CouponSettledV1`, which settlement publishes for every coupon; it moves to V2 with the contracts 2.0.0 cleanup.
 
+**D127. E4 closes on its core; trading, cashout and the web sportsbook move to E4b.**
+- E4 closes on features 1-3: the V2 bet model with bankers and system bets, the config service with the kill switch, and bet history as its own service. The `live-gate` run is green on every step: kill switch within 5 seconds, banker Trixie as four lines, and bet history showing it as a system bet.
+- Features 4-9, contracts 2.0.0 and the gate items they carry (cashout against a late result, manual void from the console, real-feed contract tests, resettlement through the stack) form E4b. E4b runs before E5 with its own `gate-e4b.sh` in `live-gate`.
+- Why: the E4 core is what later epics depend on; the rest is a separate slice with its own owner decision (the feed provider key). Closing a working, gated slice is better than leaving the epic half open.
+- E4b reverts to E4 if the owner prefers a single epic; nothing built depends on the split.
+
