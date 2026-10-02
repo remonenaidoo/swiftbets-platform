@@ -702,3 +702,15 @@ A non-idempotent call is retried only when it carries an idempotency key.
 - Measured on the live stack with Lighthouse's simulated slow 4G: 12.3 s before gzip. With gzip it is 5 to 8 s; desktop is 1.4 s.
 - The rest of the wait is render delay. The page draws only after about 355 KB of React Native Web runs and the session check returns. Preloading the banner, and splitting the code by route, were each measured and gave no gain.
 - Reaching 2.5 s needs the pages pre-rendered as HTML at build time, so the first paint does not wait for the JavaScript. Until then, desktop is held to 2.5 s and mobile to 9 s, so it cannot get worse.
+
+**D148. The app hands its sign-in to the hosted account pages through a single-use link.**
+- Wallet, limits and account pages stay server-rendered on the account site. The Android app opens them in an in-app browser, which has no app tokens.
+- The app posts its refresh token to `POST /api/session/handoff`. Identity's `/auth/handoff` rotates the app's own token and issues the browser a separate device family, so signing either out leaves the other signed in.
+- The gateway keeps only the SHA-256 hash of a 60-second code in Redis and takes it with GETDEL. A replayed link lands on sign-in. `next` is restricted to the three account pages, so it can't be used as an open redirect.
+- The app makes refresh and handoff take turns on the token, because spending a single-use token twice would sign the device out as reuse.
+
+**D149. E7 scope: no Maestro, the web export stays, no biometrics.**
+- Maestro smoke tests are cut on the same reasoning as Playwright (D146).
+- "Retire the web export" is dropped: the punter site at the link root is that export, under the web-first rule.
+- Biometric unlock was the plan's optional cut, and it is cut.
+- Proof of the money flows on Android is the signed release APK from the `v*` tag, installed by the owner. Casino on Android opens the provider's launch URL in the in-app browser.
