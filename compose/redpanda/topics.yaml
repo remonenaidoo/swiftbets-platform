@@ -102,3 +102,10 @@ topics:
   # Steward opens an incident for every drift; keep a month of them.
   - name: swiftbets.payments.drift-detected.v1
     retention.ms: 2592000000
+  # Trader decisions (E4b): settlement consumes manual results; keep a year of them for audit.
+  - name: swiftbets.trading.manual-result.v1
+    retention.ms: 31536000000
+  - name: swiftbets.trading.manual-result.v1.dlq
+    retention.ms: 2592000000
+  - name: swiftbets.trading.manual-result-rejected.v1
+  - name: swiftbets.trading.market-status-changed.v1
