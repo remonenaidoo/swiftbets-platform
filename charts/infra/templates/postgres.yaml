@@ -48,6 +48,8 @@ spec:
               valueFrom: { secretKeyRef: { name: {{ .Values.secretName }}, key: notifications-db-password } }
             - name: CONFIG_DB_PASSWORD
               valueFrom: { secretKeyRef: { name: {{ .Values.secretName }}, key: config-db-password } }
+            - name: CATALOG_DB_PASSWORD
+              valueFrom: { secretKeyRef: { name: {{ .Values.secretName }}, key: catalog-db-password } }
           readinessProbe:
             exec: { command: ["pg_isready", "-U", "postgres"] }
             periodSeconds: 5
