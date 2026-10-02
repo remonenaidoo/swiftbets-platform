@@ -27,9 +27,9 @@ place() { api punter POST /coupons -H "Idempotency-Key: gate4-$(date +%s%N)-$RAN
 expect 200 "$(api admin POST /session/login -d "{\"username\":\"admin1\",\"password\":\"$demo_password\"}")" "admin signs in"
 expect 200 "$(api punter POST /session/login -d "{\"username\":\"punter1\",\"password\":\"$demo_password\"}")" "punter signs in"
 
-# Four different open fixtures, first selection of their first open market each.
+# Four different open fixtures at least two minutes from kickoff, so none starts mid-gate; first open selection each.
 expect 200 "$(api punter GET '/fixtures/?limit=50')" "list open fixtures"
-jq -c '[.[] | select(.status == "open" or .status == "scheduled") | {fixtureId, market: (.markets[] | select(.status == "open"))} |
+jq -c '[.[] | select((.status == "open" or .status == "scheduled") and ((.kickoffAt | sub("\\.[0-9]+"; "") | sub("\\+00:00$"; "Z") | fromdateiso8601) > (now + 120))) | {fixtureId, market: (.markets[] | select(.status == "open"))} |
   {fixtureId, marketId: .market.marketId, selectionId: .market.selections[0].selectionId, odds: .market.selections[0].odds}] | unique_by(.fixtureId) | .[0:4]' \
   "$work/body" > "$work/legs"
 [[ "$(jq 'length' "$work/legs")" -ge 4 ]] || fail "need four open fixtures, found $(jq 'length' "$work/legs")"

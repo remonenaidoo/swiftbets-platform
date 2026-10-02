@@ -27,7 +27,7 @@ expect 200 "$(api punter POST /session/login -d "{\"username\":\"punter1\",\"pas
 
 # The last open fixture, so earlier gates' bets on the first ones are untouched.
 expect 200 "$(api punter GET '/fixtures/?limit=50')" "list open fixtures"
-jq -c '[.[] | select(.status == "open" or .status == "scheduled") | {fixtureId, offerVersion, market: (.markets[] | select(.status == "open"))}] | last |
+jq -c '[.[] | select((.status == "open" or .status == "scheduled") and ((.kickoffAt | sub("\\.[0-9]+"; "") | sub("\\+00:00$"; "Z") | fromdateiso8601) > (now + 120))) | {fixtureId, offerVersion, market: (.markets[] | select(.status == "open"))}] | last |
   {fixtureId, offerVersion, marketId: .market.marketId, selectionId: .market.selections[0].selectionId, odds: .market.selections[0].odds}' "$work/body" > "$work/leg"
 [[ "$(jq -r '.marketId // empty' "$work/leg")" != "" ]] || fail "no open market to bet on"
 leg="$(jq -c '{fixtureId, marketId, selectionId, odds, offerVersion}' "$work/leg")"

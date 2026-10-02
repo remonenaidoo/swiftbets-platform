@@ -625,3 +625,25 @@ A non-idempotent call is retried only when it carries an idempotency key.
 
 **D131. Payout refuses an outcome it does not know.**
 - An unknown coupon outcome now throws, so the attempt retries and dead-letters, instead of being treated as a loss. Treating it as a loss would have clawed money back from a `CashedOut` settlement.
+
+**D132. The offer is fed through one port; the replay is its first adapter.**
+- `IFeedAdapter` returns the feed's current view per poll, and `FeedSync` applies it idempotently: a fixture is saved and published only when its status or prices change, and each result version is published once. Versioning, suspensions and availability belong to offer, not the feed.
+- The recorded-season replay is now `ReplayFeedAdapter` and stays the dev and demo default. A real provider is one more adapter behind a flag.
+- Operator suspensions are matched by market id, not position, so a provider that reorders markets cannot reopen one.
+
+**D133. Stale feed data suspends markets automatically and reopens exactly what it suspended.**
+- Freshness is the provider's own update time, not our poll time. A scheduled fixture older than `Feed:StaleAfterSeconds` (default 120) has its open markets suspended, with `MarketStatusChangedV1` source `staleness`.
+- The guard runs every tick even when the poll failed. Fresh data reopens only the markets staleness suspended, so a trader's suspension is never undone by the feed.
+
+**D134. The catalogue is a Postgres read model, refreshed in one batch per tick.**
+- `sb_catalog` holds sports, competitions and fixtures for browsing. Redis stays the live truth for prices and status; placement never reads the catalogue.
+- Each tick upserts every polled fixture in one statement; a row only moves forward in `offer_version`, so the catalogue heals itself after an outage and a late write cannot regress it. A catalogue failure is logged and never stops the offer.
+- Competition ids are slugs of the provider's competition name, so replay and a real feed share ids for the same league.
+
+**D135. Postgres databases are provisioned idempotently on every compose up.**
+- `10-databases.sh` creates each login and database only if missing, and the one-shot `postgres-provision` service reruns it before the migrators. A volume created before a new database (as `sb_config` and `sb_notifications` were, D90) now gets it without a hand step or a fresh volume.
+- The infra chart carries the same script; an existing cluster volume can rerun it with `kubectl exec`.
+
+**D136. Gates only bet on fixtures at least two minutes from kickoff.**
+- The E4 gate picked the soonest fixtures; on the catalogue PR its first leg kicked off between listing (11:26:58) and placing (11:27:05), and placement rightly refused a market that had gone in play. The gate, not the stack, was wrong.
+- `gate-e4.sh` and `gate-e4b.sh` now skip fixtures within 120 seconds of kickoff; the replay lists 20 minutes ahead, so there are always enough.

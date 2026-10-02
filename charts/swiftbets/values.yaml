@@ -29,6 +29,12 @@ offer:
   env:
     Kafka__ClientId: swiftbets-offer
     ConnectionStrings__Redis: redis:6379
+  secretEnv:
+    ConnectionStrings__SbCatalog: { key: sb-catalog }
+  migrators:
+    - name: offer-migrator
+      image: { repository: swiftbets-offer-migrator }
+      secretEnv: { ConnectionStrings__SbCatalog: { key: sb-catalog } }
 
 placement:
   image: { repository: swiftbets-placement }

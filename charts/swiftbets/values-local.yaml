@@ -17,6 +17,7 @@ localSecrets:
     payments: Local-Dev-Payments-1
     steward: local-dev-steward
     history: local-dev-history
+    catalog: local-dev-catalog
     notifications: local-dev-notifications
     config: local-dev-config
   clientSecrets:

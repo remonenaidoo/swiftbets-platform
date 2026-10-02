@@ -129,6 +129,7 @@ services:
       HISTORY_DB_PASSWORD: ${HISTORY_DB_PASSWORD}
       NOTIFICATIONS_DB_PASSWORD: ${NOTIFICATIONS_DB_PASSWORD}
       CONFIG_DB_PASSWORD: ${CONFIG_DB_PASSWORD}
+      CATALOG_DB_PASSWORD: ${CATALOG_DB_PASSWORD}
     ports: ["127.0.0.1:7134:5432"]
     volumes:
       - postgres:/var/lib/postgresql/data
@@ -380,6 +381,33 @@ services:
     depends_on:
       postgres: { condition: service_healthy }
 
+  # Re-applies the idempotent database script on every up, so a volume created before a new database still gets it.
+  postgres-provision:
+    image: pgvector/pgvector:0.8.6-pg17-trixie
+    entrypoint: ["bash", "/provision/10-databases.sh"]
+    environment:
+      PGHOST: postgres
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      STEWARD_DB_PASSWORD: ${STEWARD_DB_PASSWORD}
+      HISTORY_DB_PASSWORD: ${HISTORY_DB_PASSWORD}
+      NOTIFICATIONS_DB_PASSWORD: ${NOTIFICATIONS_DB_PASSWORD}
+      CONFIG_DB_PASSWORD: ${CONFIG_DB_PASSWORD}
+      CATALOG_DB_PASSWORD: ${CATALOG_DB_PASSWORD}
+    volumes: ["./postgres:/provision:ro"]
+    networks: [swiftbets]
+    depends_on:
+      postgres: { condition: service_healthy }
+    restart: "no"
+
+  offer-migrator:
+    <<: *migrator
+    image: ghcr.io/remonenaidoo/swiftbets-offer-migrator:${SWIFTBETS_TAG:-local}
+    build: { context: ../../swiftbets-offer, dockerfile: deploy/SwiftBets.Offer.Migrator.Dockerfile }
+    environment:
+      ConnectionStrings__SbCatalog: Host=postgres;Database=sb_catalog;Username=catalog_app;Password=${CATALOG_DB_PASSWORD}
+    depends_on:
+      postgres-provision: { condition: service_completed_successfully }
+
   history-migrator:
     <<: *migrator
     image: ghcr.io/remonenaidoo/swiftbets-history-migrator:${SWIFTBETS_TAG:-local}
@@ -492,10 +520,12 @@ services:
       Jwt__Authority: http://identity:8080
       Jwt__RequireHttpsMetadata: "false"
       ConnectionStrings__Redis: redis:6379
+      ConnectionStrings__SbCatalog: Host=postgres;Database=sb_catalog;Username=catalog_app;Password=${CATALOG_DB_PASSWORD}
     healthcheck: { <<: *dotnet-healthcheck, test: ["CMD", "dotnet", "/app/SwiftBets.Offer.Api.dll", "--healthcheck"] }
     depends_on:
       topics: { condition: service_completed_successfully }
       redis: { condition: service_healthy }
+      offer-migrator: { condition: service_completed_successfully }
 
   placement:
     <<: *dotnet-service
