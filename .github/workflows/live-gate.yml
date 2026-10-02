@@ -91,7 +91,8 @@ jobs:
         run: |
           git clone --depth 1 "https://github.com/${GITHUB_REPOSITORY_OWNER}/swiftbets-offer.git" offer-contracts
           swiftbets-platform/scripts/fetch-shared-packages.sh offer-contracts
-          dotnet test offer-contracts/tests/SwiftBets.Offer.Infrastructure.Tests --filter "FullyQualifiedName~ApiFootball" --logger "console;verbosity=normal"
+          # From inside the repo, so its global.json selects the Microsoft.Testing.Platform runner.
+          cd offer-contracts && dotnet test --project tests/SwiftBets.Offer.Infrastructure.Tests --filter-class "SwiftBets.Offer.Infrastructure.Tests.ApiFootballContractTests"
       - name: Diagnostics
         if: failure()
         run: |
