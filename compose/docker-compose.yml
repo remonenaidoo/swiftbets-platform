@@ -50,6 +50,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 30
+    # Redpanda needs five file descriptors per partition; the default 1024 caps the stack at about 200 partitions.
+    ulimits: { nofile: { soft: 65536, hard: 65536 } }
 
   topics:
     image: docker.redpanda.com/redpandadata/redpanda:v26.1.18
