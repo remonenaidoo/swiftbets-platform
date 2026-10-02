@@ -44,12 +44,9 @@ placement:
     Wallet__GrpcAddress: http://wallet:8081
     ServiceIdentity__TokenEndpoint: http://identity:8080/auth/token
     ServiceIdentity__ClientId: placement
-    # Bet history moved to the bethistory service (D126); placement only reads it until its copy is removed.
-    History__RunProjector: "false"
   secretEnv:
     ServiceIdentity__ClientSecret: { key: placement-client-secret }
     ConnectionStrings__SbPlacement: { key: sb-placement }
-    ConnectionStrings__SbHistory: { key: sb-history }
     Identity__DemoPassword: { key: demo-password }
     Identity__Clients__payout: { key: payout-client-secret }
     Identity__Clients__steward: { key: steward-client-secret }
