@@ -522,6 +522,8 @@ services:
     environment:
       <<: *dotnet-env
       Kafka__ClientId: swiftbets-offer
+      # Dev and gate only: maps offer's result drill, which replays corrections and out-of-order results (production refuses it).
+      FaultInjection__Enabled: "true"
       # Human pace for the preview: one kickoff a minute, each match listed 20 minutes ahead. Load tests can
       # compress it (REPLAY_SLOT_SECONDS=10) for throughput.
       Replay__SlotSeconds: ${REPLAY_SLOT_SECONDS:-60}

@@ -663,3 +663,11 @@ A non-idempotent call is retried only when it carries an idempotency key.
 - The shared node workflow runs `scripts/npm-audit-gate.mjs` in place of `npm audit --audit-level=high`. Any high or critical runtime advisory fails the build unless the repo's `.audit-allowlist.json` lists its GHSA id with a reason and an `expires` date; an expired entry fails too, forcing a fresh review.
 - First use: GHSA-86w9-cpqp-85rv (node-forge, reached only through the Expo CLI's code-signing at build time, absent from the web bundle and the APK, no patched release) in swiftbets-mobile until 2026-11-02.
 - Why: the alternatives were switching the gate off or blocking every web and app change until an upstream release; an expiring, reasoned exception keeps the gate meaningful.
+
+**D140. Contracts 2.0.0 removes the V1 coupon events; `swiftbets.wallet.v1` stays.**
+- The plan removes `CouponPlacedV1`, `CouponSettledV1` and `swiftbets.wallet.v1` "once no consumer or open coupon uses them". The coupon events meet it: payout, bet history, realtime and steward read V2, placement publishes V2 for every coupon, and settlement stops publishing V1.
+- `swiftbets.wallet.v1` is the only wallet API: placement, payout, payments and wallet itself call it and no v2 exists. Its condition is not met, so it stays; a wallet v2 is designed when the wallet contract actually needs to change, not to rename one.
+
+**D141. Traders can look up what became of a manual result; drills publish results in a chosen order.**
+- Offer consumes `ManualResultRejectedV1` and serves `GET /admin/trading/manual-results/{id}` with every coupon settlement refused to change and why; the console's live log stays the real-time view.
+- `POST /admin/trading/drills/results` publishes a feed result at a chosen version, mapped only where fault injection is on (compose and the live gate; production refuses it). The E4b gate uses it for out-of-order resettlement and the cashout race.

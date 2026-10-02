@@ -84,6 +84,15 @@ jobs:
         run: swiftbets-platform/scripts/gate-e4.sh
       - name: Gate E4b (manual results)
         run: swiftbets-platform/scripts/gate-e4b.sh
+      - uses: actions/setup-dotnet@v6
+        with: { dotnet-version: 10.0.x }
+      - name: Gate E4b (real-feed contract tests)
+        # The feed adapter against provider-shaped responses; replaced by live recordings once the provider key exists.
+        run: |
+          git clone --depth 1 "https://github.com/${GITHUB_REPOSITORY_OWNER}/swiftbets-offer.git" offer-contracts
+          swiftbets-platform/scripts/fetch-shared-packages.sh offer-contracts
+          # From inside the repo, so its global.json selects the Microsoft.Testing.Platform runner.
+          cd offer-contracts && dotnet test --project tests/SwiftBets.Offer.Infrastructure.Tests --filter-class "SwiftBets.Offer.Infrastructure.Tests.ApiFootballContractTests"
       - name: Diagnostics
         if: failure()
         run: |
