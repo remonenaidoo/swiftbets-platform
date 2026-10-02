@@ -44,7 +44,7 @@ resource "random_password" "db" {
 }
 
 resource "random_password" "client" {
-  for_each = toset(["payout", "steward", "demo", "payments", "payments-simulator", "payments-webhook", "placement", "cashout"])
+  for_each = toset(["payout", "steward", "demo", "payments", "payments-simulator", "payments-webhook", "placement", "cashout", "history"])
   length   = 32
   special  = false
 }
@@ -84,6 +84,7 @@ resource "kubernetes_secret_v1" "swiftbets" {
       "payments-client-secret"     = random_password.client["payments"].result
       "placement-client-secret"    = random_password.client["placement"].result
       "cashout-client-secret"      = random_password.client["cashout"].result
+      "history-client-secret"      = random_password.client["history"].result
       "cashout-signing-key"        = random_id.cashout_signing.b64_std
       "payments-simulator-api-key" = random_password.client["payments-simulator"].result
       "payments-webhook-secret"    = random_password.client["payments-webhook"].result

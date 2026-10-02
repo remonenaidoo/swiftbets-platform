@@ -26,6 +26,7 @@ localSecrets:
     payments: local-dev-payments-client-secret
     placement: local-dev-placement-client-secret
     cashout: local-dev-cashout-client-secret
+    history: local-dev-history-client-secret
   # Base64 of 32 bytes; signs cashout quotes. Local only - prod's comes from Terraform.
   cashoutSigningKey: bG9jYWwtZGV2LWNhc2hvdXQtcXVvdGUtc2lnbmluZy1r
   paymentsSimulatorApiKey: local-dev-simulator-key

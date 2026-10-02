@@ -647,3 +647,14 @@ A non-idempotent call is retried only when it carries an idempotency key.
 **D136. Gates only bet on fixtures at least two minutes from kickoff.**
 - The E4 gate picked the soonest fixtures; on the catalogue PR its first leg kicked off between listing (11:26:58) and placing (11:27:05), and placement rightly refused a market that had gone in play. The gate, not the stack, was wrong.
 - `gate-e4.sh` and `gate-e4b.sh` now skip fixtures within 120 seconds of kickoff; the replay lists 20 minutes ahead, so there are always enough.
+
+**D137. In-play seams: placement knows a leg is live, waits the live delay outside the saga, and re-prices.**
+- A quote marks a leg live when its fixture is in play; it is tradable only while the feed keeps its market open. Both feeds suspend at kickoff today, so nothing is bettable in play until a live feed says otherwise.
+- A coupon with a live leg waits `placement.live-delay-seconds.{sport}` (else `.default`, else 0, capped at 30) before its saga starts, so the wait never eats the saga deadline; the saga's own quote is the refresh that refuses a market suspended or a price moved during the delay. `preMatchOnly` now refuses live legs.
+- `POST /coupons/refresh` lets a betslip re-read its legs without placing. Every fixture is football today, so the sport key is `soccer`.
+- Offer's market lifecycle makes closed final for traders and feeds alike.
+
+**D138. Bet-history integrity is checked against each owner's digest, not by reading other databases.**
+- Placement, settlement and payout each expose an internal, Service-only digest of their own facts; bet-history compares its rows with them every 15 minutes over the last 24 hours and records each run (`sb_history` 0003).
+- Events younger than 10 minutes are in flight, not findings. Findings are `missingInHistory`, `placementMismatch`, `settlementBehind` and `paidMismatch`; operators read the latest run at `/admin/history/integrity/cross-store`.
+- Why: services own their stores (D-rule since E1); a digest API keeps that boundary and needs no cross-database credentials.

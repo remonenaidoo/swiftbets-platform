@@ -83,6 +83,7 @@ identity:
     Identity__Clients__payments: { key: payments-client-secret }
     Identity__Clients__placement: { key: placement-client-secret }
     Identity__Clients__cashout: { key: cashout-client-secret }
+    Identity__Clients__bethistory: { key: history-client-secret }
     Identity__SigningKeyPem: { key: identity-signing-key }
   migrators:
     - name: identity-migrator
@@ -168,8 +169,15 @@ bethistory:
   image: { repository: swiftbets-bethistory }
   env:
     Kafka__ClientId: swiftbets-bethistory
+    Integrity__Enabled: "true"
+    Integrity__Clients__PlacementAddress: http://placement:8080
+    Integrity__Clients__SettlementAddress: http://settlement:8080
+    Integrity__Clients__PayoutAddress: http://payout:8080
+    ServiceIdentity__TokenEndpoint: http://identity:8080/auth/token
+    ServiceIdentity__ClientId: bethistory
   secretEnv:
     ConnectionStrings__SbHistory: { key: sb-history }
+    ServiceIdentity__ClientSecret: { key: history-client-secret }
   migrators:
     - name: history-migrator
       image: { repository: swiftbets-history-migrator }

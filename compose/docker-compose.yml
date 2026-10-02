@@ -243,6 +243,7 @@ services:
       Identity__Clients__payments: ${PAYMENTS_CLIENT_SECRET:?set PAYMENTS_CLIENT_SECRET in .env}
       Identity__Clients__placement: ${PLACEMENT_CLIENT_SECRET:?set PLACEMENT_CLIENT_SECRET in .env}
       Identity__Clients__cashout: ${CASHOUT_CLIENT_SECRET:?set CASHOUT_CLIENT_SECRET in .env}
+      Identity__Clients__bethistory: ${HISTORY_CLIENT_SECRET:?set HISTORY_CLIENT_SECRET in .env}
       Kafka__ClientId: swiftbets-identity
       AccountEmail__Delivery: Notifications
       AccountEmail__PublicBaseUrl: ${PUBLIC_BASE_URL:-http://127.0.0.1:7100}
@@ -462,6 +463,14 @@ services:
       Jwt__Authority: http://identity:8080
       Jwt__RequireHttpsMetadata: "false"
       ConnectionStrings__SbHistory: Host=postgres;Database=sb_history;Username=history_app;Password=${HISTORY_DB_PASSWORD}
+      # Cross-store integrity: every 15 minutes, history is checked against placement, settlement and payout.
+      Integrity__Enabled: "true"
+      Integrity__Clients__PlacementAddress: http://placement:8080
+      Integrity__Clients__SettlementAddress: http://settlement:8080
+      Integrity__Clients__PayoutAddress: http://payout:8080
+      ServiceIdentity__TokenEndpoint: http://identity:8080/auth/token
+      ServiceIdentity__ClientId: bethistory
+      ServiceIdentity__ClientSecret: ${HISTORY_CLIENT_SECRET}
     healthcheck: { <<: *dotnet-healthcheck, test: ["CMD", "dotnet", "/app/SwiftBets.History.Api.dll", "--healthcheck"] }
     depends_on:
       history-migrator: { condition: service_completed_successfully }
