@@ -643,3 +643,7 @@ A non-idempotent call is retried only when it carries an idempotency key.
 **D135. Postgres databases are provisioned idempotently on every compose up.**
 - `10-databases.sh` creates each login and database only if missing, and the one-shot `postgres-provision` service reruns it before the migrators. A volume created before a new database (as `sb_config` and `sb_notifications` were, D90) now gets it without a hand step or a fresh volume.
 - The infra chart carries the same script; an existing cluster volume can rerun it with `kubectl exec`.
+
+**D136. Gates only bet on fixtures at least two minutes from kickoff.**
+- The E4 gate picked the soonest fixtures; on the catalogue PR its first leg kicked off between listing (11:26:58) and placing (11:27:05), and placement rightly refused a market that had gone in play. The gate, not the stack, was wrong.
+- `gate-e4.sh` and `gate-e4b.sh` now skip fixtures within 120 seconds of kickoff; the replay lists 20 minutes ahead, so there are always enough.
