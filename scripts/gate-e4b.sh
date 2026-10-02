@@ -100,7 +100,7 @@ token="$(jq -r '.quoteToken // empty' "$work/body")"
 ( curl -sS -o "$work/race-result" -w '%{http_code}' -b "$work/admin" -X POST "$gateway/api/admin/trading/drills/results" -H 'Content-Type: application/json' -H 'X-SwiftBets-Csrf: 1' -d "{\"fixtureId\":\"$(jq -r .fixtureId <<<"$d")\",\"version\":4,\"status\":\"official\",\"homeGoals\":2,\"awayGoals\":0}" > "$work/race-result.status" ) &
 wait
 echo "ok   cashout ($(cat "$work/race-cashout.status")) and late result ($(cat "$work/race-result.status")) raced"
-await_coupon "$racing" '(.status == "cashedout" or .status == "won") and .settlementVersion == 1 and .paidToDate == .payout and .payout > 0' "exactly one settlement, paid once"
+await_coupon "$racing" '(.status == "cashedOut" or .status == "won") and .settlementVersion == 1 and .paidToDate == .payout and .payout > 0' "exactly one settlement, paid once"
 sleep 6
 await_coupon "$racing" '.settlementVersion == 1 and .paidToDate == .payout' "nothing settled or paid a second time"
 
@@ -111,7 +111,7 @@ held="$(jq -r '.couponId' "$work/body")"
 await_coupon "$held" '.status == "open"' "bet history shows it open"
 for _ in $(seq 1 20); do [[ "$(api punter POST /cashout/quote -d "{\"couponId\":\"$held\"}")" == 200 ]] && break; sleep 1; done
 expect 200 "$(api punter POST /cashout/execute -d "{\"quoteToken\":\"$(jq -r .quoteToken "$work/body")\"}")" "the punter cashes it out"
-await_coupon "$held" '.status == "cashedout"' "bet history shows it cashed out"
+await_coupon "$held" '.status == "cashedOut"' "bet history shows it cashed out"
 expect 202 "$(api admin POST /admin/trading/manual-results -d "$(jq -c '{scope: "market", action: "void", fixtureId, marketId, reason: "E4b gate: void after cashout"}' <<<"$e")")" "trader voids the cashed-out bet's market"
 manual="$(jq -r '.manualResultId' "$work/body")"
 for _ in $(seq 1 30); do
@@ -123,6 +123,6 @@ for _ in $(seq 1 30); do
   sleep 2
 done
 jq -e --arg id "$held" 'any(.rejections[]?; .couponId == $id)' "$work/body" >/dev/null || fail "no explicit rejection for $held: $(head -c 300 "$work/body")"
-await_coupon "$held" '.status == "cashedout" and .settlementVersion == 1' "the cashed-out bet is unchanged"
+await_coupon "$held" '.status == "cashedOut" and .settlementVersion == 1' "the cashed-out bet is unchanged"
 
 echo "E4b gate (void, out-of-order resettlement, cashout race, rejection on a cashed-out bet) passed"
