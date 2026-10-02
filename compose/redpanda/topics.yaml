@@ -108,4 +108,9 @@ topics:
   - name: swiftbets.trading.manual-result.v1.dlq
     retention.ms: 2592000000
   - name: swiftbets.trading.manual-result-rejected.v1
+  # Realtime pushes rejections and status changes to the console; a consumer without its dead-letter topic stalls.
+  - name: swiftbets.trading.manual-result-rejected.v1.dlq
+    retention.ms: 2592000000
   - name: swiftbets.trading.market-status-changed.v1
+  - name: swiftbets.trading.market-status-changed.v1.dlq
+    retention.ms: 2592000000
