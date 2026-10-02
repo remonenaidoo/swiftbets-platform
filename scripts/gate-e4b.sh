@@ -36,10 +36,28 @@ jq -c '[.[] | select((.status == "open" or .status == "scheduled") and ((.kickof
   | {fixtureId, offerVersion, marketId: .market.marketId, selectionId: "home", odds: (.market.selections[] | select(.selectionId == "home") | .odds)}] | reverse' "$work/body" > "$work/legs"
 (( $(jq length "$work/legs") >= 6 )) || fail "need six open fixtures, found $(jq length "$work/legs")"
 leg_at() { jq -c --argjson i "$1" '.[$i]' "$work/legs"; }
+# The same leg at the price and offer version in the fixtures list just fetched into body.
+repriced() {
+  jq -c --argjson leg "$1" '.[] | select(.fixtureId == $leg.fixtureId) | {fixtureId, offerVersion, marketId: $leg.marketId, selectionId: $leg.selectionId,
+    odds: (.markets[] | select(.marketId == $leg.marketId) | .selections[] | select(.selectionId == $leg.selectionId) | .odds)}' "$work/body"
+}
+place() { api punter POST /coupons -H "Idempotency-Key: gate4b-$(date +%s%N)-$RANDOM" -d "$1"; }
+single_on() { echo "{\"stake\":1000,\"currency\":\"ZAR\",\"legs\":[$(jq -c '{fixtureId, marketId, selectionId, odds, offerVersion}' <<<"$1")]}"; }
+# Prices move live: a single re-reads its leg's price before each attempt, so a refused price is never resent.
+place_single() {
+  local code
+  for _ in $(seq 1 20); do
+    api punter GET '/fixtures/?limit=60' >/dev/null
+    code="$(place "$(single_on "$(repriced "$1")")")"
+    [[ "$code" == 201 ]] && break
+    sleep 0.5
+  done
+  echo "$code"
+}
 leg="$(leg_at 0)"
 jq -c '.' <<<"$leg" > "$work/leg"
 
-expect 201 "$(api punter POST /coupons -H "Idempotency-Key: gate4b-$(date +%s%N)" -d "{\"stake\":1000,\"currency\":\"ZAR\",\"legs\":[$leg]}")" "a single is placed"
+expect 201 "$(place_single "$leg")" "a single is placed"
 coupon="$(jq -r '.couponId' "$work/body")"
 
 void="$(jq -c '{scope: "market", action: "void", fixtureId, marketId, reason: "E4b gate: market abandoned"}' "$work/leg")"
@@ -61,8 +79,6 @@ await_coupon() {
 }
 row() { jq -c --arg id "$1" '.[] | select(.couponId == $id)' "$work/body"; }
 drill() { api admin POST /admin/trading/drills/results -d "{\"fixtureId\":\"$1\",\"version\":$2,\"status\":\"$3\",\"homeGoals\":$4,\"awayGoals\":$5}"; }
-place() { api punter POST /coupons -H "Idempotency-Key: gate4b-$(date +%s%N)-$RANDOM" -d "$1"; }
-single_on() { echo "{\"stake\":1000,\"currency\":\"ZAR\",\"legs\":[$(jq -c '{fixtureId, marketId, selectionId, odds, offerVersion}' <<<"$1")]}"; }
 
 # 1. A market void returns the stake.
 await_coupon "$coupon" '.status == "void" and .payout == 1000' "the single settled as void with the stake returned"
@@ -72,9 +88,14 @@ config="$(api admin GET /admin/config/ >/dev/null; jq -r '.[] | select(.key == "
 if [[ "$config" != "true" ]]; then
   expect 200 "$(api admin PUT /admin/config/flags.system-bets -d '{"value":"true","reason":"E4b gate: Trixie"}')" "admin opens system bets"
 fi
-a="$(leg_at 1)"; b="$(leg_at 2)"; c="$(leg_at 3)"
-trixie="{\"stake\":400,\"currency\":\"ZAR\",\"legs\":[$(jq -c '{fixtureId, marketId, selectionId, odds, offerVersion}' <<<"$a"),$(jq -c '{fixtureId, marketId, selectionId, odds, offerVersion}' <<<"$b"),$(jq -c '{fixtureId, marketId, selectionId, odds, offerVersion}' <<<"$c")],\"bets\":[{\"name\":\"trixie\",\"unitStake\":100}]}"
-for _ in $(seq 1 20); do [[ "$(place "$trixie")" == 201 ]] && break; sleep 0.5; done
+# Prices move live, so each attempt re-reads the three legs instead of resending prices that were refused.
+for _ in $(seq 1 20); do
+  api punter GET '/fixtures/?limit=60' >/dev/null
+  a="$(repriced "$(leg_at 1)")"; b="$(repriced "$(leg_at 2)")"; c="$(repriced "$(leg_at 3)")"
+  trixie="{\"stake\":400,\"currency\":\"ZAR\",\"legs\":[$(jq -c '{fixtureId, marketId, selectionId, odds, offerVersion}' <<<"$a"),$(jq -c '{fixtureId, marketId, selectionId, odds, offerVersion}' <<<"$b"),$(jq -c '{fixtureId, marketId, selectionId, odds, offerVersion}' <<<"$c")],\"bets\":[{\"name\":\"trixie\",\"unitStake\":100}]}"
+  [[ "$(place "$trixie")" == 201 ]] && break
+  sleep 0.5
+done
 [[ "$(jq '.bets[0].lines' "$work/body")" == 4 ]] || fail "the Trixie was not placed as four lines: $(head -c 300 "$work/body")"
 trixie_id="$(jq -r '.couponId' "$work/body")"
 echo "ok   a Trixie is placed as four lines"
@@ -90,7 +111,7 @@ await_coupon "$trixie_id" '.paidToDate == .payout' "payout clawed back to the re
 
 # 3. A cashout racing a late result settles once and pays once, whichever wins the coupon lock.
 d="$(leg_at 4)"
-expect 201 "$(place "$(single_on "$d")")" "a single to cash out is placed"
+expect 201 "$(place_single "$d")" "a single to cash out is placed"
 racing="$(jq -r '.couponId' "$work/body")"
 await_coupon "$racing" '.status == "open"' "bet history shows it open"
 for _ in $(seq 1 20); do [[ "$(api punter POST /cashout/quote -d "{\"couponId\":\"$racing\"}")" == 200 ]] && break; sleep 1; done
@@ -106,7 +127,7 @@ await_coupon "$racing" '.settlementVersion == 1 and .paidToDate == .payout' "not
 
 # 4. A trader's void on a cashed-out bet is rejected explicitly, and the trader sees why.
 e="$(leg_at 5)"
-expect 201 "$(place "$(single_on "$e")")" "a single is placed"
+expect 201 "$(place_single "$e")" "a single is placed"
 held="$(jq -r '.couponId' "$work/body")"
 await_coupon "$held" '.status == "open"' "bet history shows it open"
 for _ in $(seq 1 20); do [[ "$(api punter POST /cashout/quote -d "{\"couponId\":\"$held\"}")" == 200 ]] && break; sleep 1; done

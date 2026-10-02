@@ -690,3 +690,15 @@ A non-idempotent call is retried only when it carries an idempotency key.
 - The E5 gate showed a customer could launch a game in the moment after taking a break, before the compacted topic delivered it. Refusing play has to be strongly consistent.
 - Launch refuses at once if the topic already holds a blocking restriction. Otherwise it calls compliance's service-only `GET /internal/users/{id}/restrictions`, with a 3 second timeout. Any failure to get an answer refuses with `restrictions_unavailable`, so a compliance outage stops casino launches, not safer-gambling checks.
 - A break also ends the customer's sessions. The gate accepts either outcome: sign-in refused, or launch refused with `casino_restricted`. It fails only if a game opens.
+
+**D146. E6 drops new Playwright coverage; the gate is builds, budgets and Lighthouse.**
+- The owner ruled Playwright work out of E6 as poor value. The existing e2e job stays as it is; no new browser tests are written for the second brand or the money flows.
+- The E6 gate is now:
+  - both brands build in CI;
+  - each brand's web JavaScript stays under 400 KB gzipped;
+  - Lighthouse accessibility scores 100 on desktop and mobile against the live stack.
+
+**D147. Mobile LCP is a ratchet at 9 s until the site is pre-rendered.**
+- Measured on the live stack with Lighthouse's simulated slow 4G: 12.3 s before gzip. With gzip it is 5 to 8 s; desktop is 1.4 s.
+- The rest of the wait is render delay. The page draws only after about 355 KB of React Native Web runs and the session check returns. Preloading the banner, and splitting the code by route, were each measured and gave no gain.
+- Reaching 2.5 s needs the pages pre-rendered as HTML at build time, so the first paint does not wait for the JavaScript. Until then, desktop is held to 2.5 s and mobile to 9 s, so it cannot get worse.
