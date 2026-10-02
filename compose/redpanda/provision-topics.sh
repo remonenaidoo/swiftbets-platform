@@ -30,7 +30,8 @@ awk '
     rpk topic alter-config "$topic" --set "retention.ms=$retention" -X brokers="$brokers" >/dev/null
     echo "exists  $topic"
   else
-    rpk topic create "$topic" -p "$partitions" -r 1 "${args[@]}" -X brokers="$brokers" >/dev/null
+    # rpk reports a refused topic in its table, not its exit code alone; show it so a failure is never silent.
+    out="$(rpk topic create "$topic" -p "$partitions" -r 1 "${args[@]}" -X brokers="$brokers" 2>&1)" || { echo "$out" >&2; exit 1; }
     echo "created $topic (p=$partitions)"
   fi
 done
