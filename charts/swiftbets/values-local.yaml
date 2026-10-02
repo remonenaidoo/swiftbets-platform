@@ -16,6 +16,7 @@ localSecrets:
     compliance: Local-Dev-Compliance-1
     payments: Local-Dev-Payments-1
     casino: Local-Dev-Casino-1
+    casino-catalog: local-dev-casino-catalog
     steward: local-dev-steward
     history: local-dev-history
     catalog: local-dev-catalog

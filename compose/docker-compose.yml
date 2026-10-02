@@ -133,6 +133,7 @@ services:
       NOTIFICATIONS_DB_PASSWORD: ${NOTIFICATIONS_DB_PASSWORD}
       CONFIG_DB_PASSWORD: ${CONFIG_DB_PASSWORD}
       CATALOG_DB_PASSWORD: ${CATALOG_DB_PASSWORD}
+      CASINO_CATALOG_DB_PASSWORD: ${CASINO_CATALOG_DB_PASSWORD}
     ports: ["127.0.0.1:7134:5432"]
     volumes:
       - postgres:/var/lib/postgresql/data
@@ -398,6 +399,7 @@ services:
       NOTIFICATIONS_DB_PASSWORD: ${NOTIFICATIONS_DB_PASSWORD}
       CONFIG_DB_PASSWORD: ${CONFIG_DB_PASSWORD}
       CATALOG_DB_PASSWORD: ${CATALOG_DB_PASSWORD}
+      CASINO_CATALOG_DB_PASSWORD: ${CASINO_CATALOG_DB_PASSWORD}
     volumes: ["./postgres:/provision:ro"]
     networks: [swiftbets]
     depends_on:
@@ -491,6 +493,48 @@ services:
     depends_on:
       sqlserver-init: { condition: service_completed_successfully }
 
+  casino-catalog-migrator:
+    <<: *migrator
+    image: ghcr.io/remonenaidoo/swiftbets-casino-catalog-migrator:${SWIFTBETS_TAG:-local}
+    build: { context: ../../swiftbets-casino, dockerfile: deploy/SwiftBets.Casino.CatalogMigrator.Dockerfile }
+    environment:
+      ConnectionStrings__SbCasinoCatalog: Host=postgres;Database=sb_casino;Username=casino_catalog_app;Password=${CASINO_CATALOG_DB_PASSWORD}
+    depends_on:
+      postgres-provision: { condition: service_completed_successfully }
+
+  # Casino catalogue (E5): games, providers and categories; the lobby API.
+  casino-catalog:
+    <<: *dotnet-service
+    image: ghcr.io/remonenaidoo/swiftbets-casino-catalog:${SWIFTBETS_TAG:-local}
+    build: { context: ../../swiftbets-casino, dockerfile: deploy/SwiftBets.Casino.Catalog.Api.Dockerfile }
+    environment:
+      <<: *dotnet-env
+      Jwt__Authority: http://identity:8080
+      Jwt__RequireHttpsMetadata: "false"
+      ConnectionStrings__SbCasinoCatalog: Host=postgres;Database=sb_casino;Username=casino_catalog_app;Password=${CASINO_CATALOG_DB_PASSWORD}
+    healthcheck: { <<: *dotnet-healthcheck, test: ["CMD", "dotnet", "/app/SwiftBets.Casino.Catalog.Api.dll", "--healthcheck"] }
+    depends_on:
+      casino-catalog-migrator: { condition: service_completed_successfully }
+
+  # Two simulated providers (seamless and transfer wallet) with playable game pages, served at /casino-sim through the gateway.
+  casino-sim:
+    <<: *dotnet-service
+    image: ghcr.io/remonenaidoo/swiftbets-casino-sim:${SWIFTBETS_TAG:-local}
+    build: { context: ../../swiftbets-casino, dockerfile: deploy/SwiftBets.Casino.Simulator.Dockerfile }
+    environment:
+      <<: *dotnet-env
+      FaultInjection__Enabled: "true"
+      Jwt__Authority: http://identity:8080
+      Jwt__RequireHttpsMetadata: "false"
+      ConnectionStrings__SbCasinoCatalog: Host=postgres;Database=sb_casino;Username=casino_catalog_app;Password=${CASINO_CATALOG_DB_PASSWORD}
+      Simulator__GatewayAddress: http://casino:8080
+      Simulator__Providers__sim-seamless__Secret: ${CASINO_SIM_SEAMLESS_SECRET}
+      Simulator__Providers__sim-transfer__Secret: ${CASINO_SIM_TRANSFER_SECRET}
+    healthcheck: { <<: *dotnet-healthcheck, test: ["CMD", "dotnet", "/app/SwiftBets.Casino.Simulator.dll", "--healthcheck"] }
+    depends_on:
+      casino-catalog-migrator: { condition: service_completed_successfully }
+      casino: { condition: service_healthy }
+
   # Casino gateway (E5): launch sessions, the providers' signed wallet API, free spins, reconciliation.
   casino:
     <<: *dotnet-service
@@ -510,6 +554,8 @@ services:
       Casino__Providers__sim-seamless__LaunchBaseUrl: ${PUBLIC_ORIGIN:-http://localhost:7100}/casino-sim
       Casino__Providers__sim-transfer__Secret: ${CASINO_SIM_TRANSFER_SECRET}
       Casino__Providers__sim-transfer__LaunchBaseUrl: ${PUBLIC_ORIGIN:-http://localhost:7100}/casino-sim
+      Casino__Providers__sim-seamless__ReportUrl: http://casino-sim:8080/reports
+      Casino__Providers__sim-transfer__ReportUrl: http://casino-sim:8080/reports
     healthcheck: { <<: *dotnet-healthcheck, test: ["CMD", "dotnet", "/app/SwiftBets.Casino.Gateway.Api.dll", "--healthcheck"] }
     depends_on:
       casino-migrator: { condition: service_completed_successfully }

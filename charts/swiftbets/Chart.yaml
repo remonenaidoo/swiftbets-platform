@@ -21,6 +21,8 @@ dependencies:
   - { name: bethistory, version: 0.1.0, repository: file://../bethistory, condition: bethistory.enabled }
   - { name: cashout, version: 0.1.0, repository: file://../cashout, condition: cashout.enabled }
   - { name: casino, version: 0.1.0, repository: file://../casino, condition: casino.enabled }
+  - { name: casino-catalog, version: 0.1.0, repository: file://../casino-catalog, condition: casino-catalog.enabled }
+  - { name: casino-sim, version: 0.1.0, repository: file://../casino-sim, condition: casino-sim.enabled }
   - { name: settlement, version: 0.1.0, repository: file://../settlement }
   - { name: payout, version: 0.1.0, repository: file://../payout }
   - { name: steward, version: 0.1.0, repository: file://../steward }

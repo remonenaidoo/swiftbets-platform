@@ -195,6 +195,8 @@ casino:
     ServiceIdentity__ClientId: casino
     Casino__Providers__sim-seamless__LaunchBaseUrl: http://localhost:7100/casino-sim
     Casino__Providers__sim-transfer__LaunchBaseUrl: http://localhost:7100/casino-sim
+    Casino__Providers__sim-seamless__ReportUrl: http://casino-sim:8080/reports
+    Casino__Providers__sim-transfer__ReportUrl: http://casino-sim:8080/reports
   secretEnv:
     ConnectionStrings__SbCasino: { key: sb-casino }
     ServiceIdentity__ClientSecret: { key: casino-client-secret }
@@ -205,6 +207,28 @@ casino:
       image: { repository: swiftbets-casino-migrator }
       env: { Migrator__AppLogin: casino_app, Migrator__EnsureDatabase: "true" }
       secretEnv: { ConnectionStrings__SbCasino: { key: sb-casino-migrate } }
+
+# Casino catalogue (E5): the lobby API over Postgres sb_casino.
+casino-catalog:
+  enabled: true
+  image: { repository: swiftbets-casino-catalog }
+  secretEnv:
+    ConnectionStrings__SbCasinoCatalog: { key: sb-casino-catalog }
+  migrators:
+    - name: casino-catalog-migrator
+      image: { repository: swiftbets-casino-catalog-migrator }
+      secretEnv: { ConnectionStrings__SbCasinoCatalog: { key: sb-casino-catalog } }
+
+# Simulated casino providers (E5); production would replace them with real provider adapters.
+casino-sim:
+  enabled: true
+  image: { repository: swiftbets-casino-sim }
+  env:
+    Simulator__GatewayAddress: http://casino:8080
+  secretEnv:
+    ConnectionStrings__SbCasinoCatalog: { key: sb-casino-catalog }
+    Simulator__Providers__sim-seamless__Secret: { key: casino-sim-seamless-secret }
+    Simulator__Providers__sim-transfer__Secret: { key: casino-sim-transfer-secret }
 
 # Cashout: stateless quotes at live odds, executed through settlement's final-state lock over gRPC.
 cashout:

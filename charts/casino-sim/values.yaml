@@ -1,0 +1,10 @@
+# Defaults only; the umbrella chart (charts/swiftbets) supplies the environment.
+image:
+  repository: swiftbets-casino-sim
+autoscaling:
+  enabled: false
+pdb:
+  enabled: false
+resources:
+  requests: { cpu: 50m, memory: 160Mi }
+  limits: { memory: 384Mi }
