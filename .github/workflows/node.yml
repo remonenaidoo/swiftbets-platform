@@ -33,7 +33,10 @@ jobs:
       - run: npm run typecheck --if-present
       - run: npm test --if-present
       - run: npm run build --if-present
-      - run: npm audit --omit=dev --audit-level=high
+      - uses: actions/checkout@v7
+        with: { repository: remonenaidoo/swiftbets-platform, path: .platform, sparse-checkout: scripts/npm-audit-gate.mjs, sparse-checkout-cone-mode: false }
+      # High or critical runtime advisories fail the build unless .audit-allowlist.json excuses them with a reason and an expiry (D139).
+      - run: node ${{ github.workspace }}/.platform/scripts/npm-audit-gate.mjs
 
   codeql:
     runs-on: ubuntu-latest
