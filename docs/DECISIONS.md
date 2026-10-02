@@ -658,3 +658,8 @@ A non-idempotent call is retried only when it carries an idempotency key.
 - Placement, settlement and payout each expose an internal, Service-only digest of their own facts; bet-history compares its rows with them every 15 minutes over the last 24 hours and records each run (`sb_history` 0003).
 - Events younger than 10 minutes are in flight, not findings. Findings are `missingInHistory`, `placementMismatch`, `settlementBehind` and `paidMismatch`; operators read the latest run at `/admin/history/integrity/cross-store`.
 - Why: services own their stores (D-rule since E1); a digest API keeps that boundary and needs no cross-database credentials.
+
+**D139. A high advisory with no fix can be excused per repo, with a reason and an expiry; nothing else gets through.**
+- The shared node workflow runs `scripts/npm-audit-gate.mjs` in place of `npm audit --audit-level=high`. Any high or critical runtime advisory fails the build unless the repo's `.audit-allowlist.json` lists its GHSA id with a reason and an `expires` date; an expired entry fails too, forcing a fresh review.
+- First use: GHSA-86w9-cpqp-85rv (node-forge, reached only through the Expo CLI's code-signing at build time, absent from the web bundle and the APK, no patched release) in swiftbets-mobile until 2026-11-02.
+- Why: the alternatives were switching the gate off or blocking every web and app change until an upstream release; an expiring, reasoned exception keeps the gate meaningful.
