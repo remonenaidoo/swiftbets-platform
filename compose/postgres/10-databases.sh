@@ -12,12 +12,14 @@ $(role notifications_app "${NOTIFICATIONS_DB_PASSWORD}")
 $(role config_app "${CONFIG_DB_PASSWORD}")
 $(role catalog_app "${CATALOG_DB_PASSWORD}")
 $(role casino_catalog_app "${CASINO_CATALOG_DB_PASSWORD}")
+$(role risk_app "${RISK_DB_PASSWORD}")
 $(database sb_steward steward_app)
 $(database sb_history history_app)
 $(database sb_notifications notifications_app)
 $(database sb_config config_app)
 $(database sb_catalog catalog_app)
 $(database sb_casino casino_catalog_app)
+$(database sb_risk risk_app)
 SQL
 
 psql -v ON_ERROR_STOP=1 --username "${POSTGRES_USER:-postgres}" --dbname sb_steward -c 'CREATE EXTENSION IF NOT EXISTS vector;'

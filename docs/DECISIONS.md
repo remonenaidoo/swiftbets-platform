@@ -714,3 +714,10 @@ A non-idempotent call is retried only when it carries an idempotency key.
 - "Retire the web export" is dropped: the punter site at the link root is that export, under the web-first rule.
 - Biometric unlock was the plan's optional cut, and it is cut.
 - Proof of the money flows on Android is the signed release APK from the `v*` tag, installed by the owner. Casino on Android opens the provider's launch URL in the in-app browser.
+
+**D150. Risk event-sources each fixture with its own Dapper journal, not Akka.Persistence.**
+- `Akka.Persistence.Sql` works through linq2db, and the stack is Dapper only. Each `FixtureActor` journals placed and settled changes to `risk.journal`, keyed by fixture and version and unique per coupon and kind. It snapshots to `risk.snapshots` every 50 changes (10 in compose, so the gate's restart exercises it). On first use it loads the snapshot and replays the journal after it.
+- A change is journalled before the actor replies, and the Kafka consumer commits only after every fixture it touches replied. A failed write restarts the actor, which reloads. A coupon seen twice, or a settlement that arrives before its placement, changes nothing.
+- Liability counts each coupon's whole potential payout on every outcome it backs. That is conservative for accumulators and system bets, which is the safe side for a cap.
+- Pattern windows live in memory, and a restart starts them empty. Alerts are advisory, stored for the console and published.
+- The local `FixtureRegion` routes with `FixtureMessageExtractor`, a `HashCodeMessageExtractor`, so a cluster `ShardRegion` can replace it.

@@ -55,6 +55,9 @@ topics:
   - name: swiftbets.risk.liability-changed.v1
     partitions: 6
   - name: swiftbets.risk.risk-alert.v1
+  # The exposure rule in force per fixture, latest per key; placement reads it to the end before it reports ready.
+  - name: swiftbets.risk.exposure-limits.v1
+    config: { cleanup.policy: compact }
   # Dead-letter queues for the live-view consumers (realtime, steward)
   - name: swiftbets.placement.coupon-rejected.v1.dlq
     retention.ms: 2592000000
