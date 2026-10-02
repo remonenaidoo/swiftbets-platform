@@ -19,6 +19,7 @@ run() {
 
 check() {
   local form="$1" budget="$2"
+  # shellcheck disable=SC2016 # the JavaScript's own template strings, not shell expansions
   node -e '
     const r = require(process.argv[1]);
     const [form, budget] = [process.argv[2], Number(process.argv[3])];

@@ -36,6 +36,11 @@ jq -c '[.[] | select((.status == "open" or .status == "scheduled") and ((.kickof
   | {fixtureId, offerVersion, marketId: .market.marketId, selectionId: "home", odds: (.market.selections[] | select(.selectionId == "home") | .odds)}] | reverse' "$work/body" > "$work/legs"
 (( $(jq length "$work/legs") >= 6 )) || fail "need six open fixtures, found $(jq length "$work/legs")"
 leg_at() { jq -c --argjson i "$1" '.[$i]' "$work/legs"; }
+# The same leg at the price and offer version in the fixtures list just fetched into body.
+repriced() {
+  jq -c --argjson leg "$1" '.[] | select(.fixtureId == $leg.fixtureId) | {fixtureId, offerVersion, marketId: $leg.marketId, selectionId: $leg.selectionId,
+    odds: (.markets[] | select(.marketId == $leg.marketId) | .selections[] | select(.selectionId == $leg.selectionId) | .odds)}' "$work/body"
+}
 leg="$(leg_at 0)"
 jq -c '.' <<<"$leg" > "$work/leg"
 
@@ -72,9 +77,14 @@ config="$(api admin GET /admin/config/ >/dev/null; jq -r '.[] | select(.key == "
 if [[ "$config" != "true" ]]; then
   expect 200 "$(api admin PUT /admin/config/flags.system-bets -d '{"value":"true","reason":"E4b gate: Trixie"}')" "admin opens system bets"
 fi
-a="$(leg_at 1)"; b="$(leg_at 2)"; c="$(leg_at 3)"
-trixie="{\"stake\":400,\"currency\":\"ZAR\",\"legs\":[$(jq -c '{fixtureId, marketId, selectionId, odds, offerVersion}' <<<"$a"),$(jq -c '{fixtureId, marketId, selectionId, odds, offerVersion}' <<<"$b"),$(jq -c '{fixtureId, marketId, selectionId, odds, offerVersion}' <<<"$c")],\"bets\":[{\"name\":\"trixie\",\"unitStake\":100}]}"
-for _ in $(seq 1 20); do [[ "$(place "$trixie")" == 201 ]] && break; sleep 0.5; done
+# Prices move live, so each attempt re-reads the three legs instead of resending prices that were refused.
+for _ in $(seq 1 20); do
+  api punter GET '/fixtures/?limit=60' >/dev/null
+  a="$(repriced "$(leg_at 1)")"; b="$(repriced "$(leg_at 2)")"; c="$(repriced "$(leg_at 3)")"
+  trixie="{\"stake\":400,\"currency\":\"ZAR\",\"legs\":[$(jq -c '{fixtureId, marketId, selectionId, odds, offerVersion}' <<<"$a"),$(jq -c '{fixtureId, marketId, selectionId, odds, offerVersion}' <<<"$b"),$(jq -c '{fixtureId, marketId, selectionId, odds, offerVersion}' <<<"$c")],\"bets\":[{\"name\":\"trixie\",\"unitStake\":100}]}"
+  [[ "$(place "$trixie")" == 201 ]] && break
+  sleep 0.5
+done
 [[ "$(jq '.bets[0].lines' "$work/body")" == 4 ]] || fail "the Trixie was not placed as four lines: $(head -c 300 "$work/body")"
 trixie_id="$(jq -r '.couponId' "$work/body")"
 echo "ok   a Trixie is placed as four lines"
