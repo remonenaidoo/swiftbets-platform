@@ -355,7 +355,7 @@ services:
       Simulator__ApiKey: ${PAYMENTS_SIMULATOR_API_KEY}
       Simulator__WebhookSecret: ${PAYMENTS_WEBHOOK_SECRET}
       Simulator__WebhookUrl: http://payments:8080/webhooks/simulator
-      Simulator__PublicUrl: http://127.0.0.1:7140
+      Simulator__PublicUrl: ${PUBLIC_ORIGIN:-http://127.0.0.1:7100}/pay-sim
     ports: ["127.0.0.1:7140:8080"]
     healthcheck: { <<: *dotnet-healthcheck, test: ["CMD", "dotnet", "/app/SwiftBets.Payments.Simulator.dll", "--healthcheck"] }
 
@@ -899,7 +899,7 @@ services:
     build: { context: ../../swiftbets-web }
     environment:
       GATEWAY_URL: http://gateway:8080
-      CHECKOUT_ORIGINS: http://127.0.0.1:7140
+      CHECKOUT_ORIGINS: ${PUBLIC_ORIGIN:-http://127.0.0.1:7100}
     ports: ["127.0.0.1:7113:8080"]
     networks: [swiftbets]
     mem_limit: 192m
