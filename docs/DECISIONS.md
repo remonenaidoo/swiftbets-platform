@@ -747,3 +747,8 @@ A non-idempotent call is retried only when it carries an idempotency key.
   - every alert class replays through the real agent loop and validator to an evidence-valid report with the runbook's action;
   - the runbook retrieval evaluation must keep hit@3 at or above 90%. It measured 43% before this work, because full-text search required every word; with any-word matching it measures 97%.
 - Where no model key is configured (the preview), a live incident's replay diagnosis fails validation and is stored as failed. Steward proposes nothing it cannot prove.
+
+**D155. Core platform first; one casino provider built to production grade.**
+- `docs/BACKLOG.md` is the build order: P0 core money loop, P1 one casino provider, P2 sportsbook depth, P3 account extras, P4 expansion products. Risk stays paused.
+- The casino adapter is Pragmatic Play's seamless wallet: the widest catalogue and a public demo mode, so free games cover test runs without a contract. Other providers follow the same template once contracted.
+- The adapter fixes what weaker integrations get wrong: every callback is signed and comes from an allowlisted address, a repeat returns the original reply, refunds use the recorded stake, and a refund for an unseen bet leaves a marker that refuses the late bet.
