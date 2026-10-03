@@ -737,3 +737,13 @@ A non-idempotent call is retried only when it carries an idempotency key.
 - The session lists the access token's `perm` claims, and the console hides screens without the permission, even at a typed address. Every service still refuses the call.
 - Roles and their permissions are managed in the console (`identity.roles.read`/`write`, Admin only). Admin can never lose role management, and nobody can remove their own Admin role. Changes reach staff at their next sign-in.
 - Finance reports (`reports.read`) are for Admin and Ops; traders don't get them. `trader1` is the demo trader seat, used by the E9 gate.
+
+**D154. Steward takes every alert, proves its reasoning on replays, and never sees personal data.**
+- Alertmanager sends every alert to Steward's webhook with a shared bearer token. A rule table maps each platform alert to an incident kind, with the subject taken from the alert's label; a test fails the build if a platform alert has no rule. The casino's provider reconciliation opens `ProviderDrift` from its topic.
+- New tools read the wallet's ledger reconciliation, the casino's provider reconciliation, and customer impact. Customer impact returns counts, never ids.
+- New remediations: the kill switch, replaying payment webhooks (the payments sweep run now) and re-driving parked payouts. Each still needs a person's approval and is audited; each target service accepts the Service role for exactly that call.
+- A scrubbing decorator sits outermost around the model, so email addresses, phone numbers, card numbers and ID numbers never reach the provider or a recorded transcript.
+- CI gates use no model calls:
+  - every alert class replays through the real agent loop and validator to an evidence-valid report with the runbook's action;
+  - the runbook retrieval evaluation must keep hit@3 at or above 90%. It measured 43% before this work, because full-text search required every word; with any-word matching it measures 97%.
+- Where no model key is configured (the preview), a live incident's replay diagnosis fails validation and is stored as failed. Steward proposes nothing it cannot prove.

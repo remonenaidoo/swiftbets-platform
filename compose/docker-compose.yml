@@ -187,6 +187,23 @@ services:
       timeout: 3s
       retries: 10
 
+  # Routes every Prometheus alert to Steward's webhook with a shared bearer token.
+  alertmanager:
+    image: prom/alertmanager:v0.28.1
+    entrypoint: ["/bin/sh", "-c", "printf '%s' \"$$STEWARD_ALERT_TOKEN\" > /tmp/steward-token && exec /bin/alertmanager --config.file=/etc/alertmanager/alertmanager.yml --storage.path=/alertmanager"]
+    environment:
+      STEWARD_ALERT_TOKEN: ${STEWARD_ALERT_TOKEN:?set STEWARD_ALERT_TOKEN in .env}
+    volumes:
+      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    ports: ["127.0.0.1:7193:9093"]
+    networks: [swiftbets]
+    mem_limit: 128m
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9093/-/ready"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
   grafana:
     image: grafana/grafana:13.0.10
     environment:
@@ -743,6 +760,10 @@ services:
       Platform__OfferAddress: http://offer:8080
       Platform__WalletAddress: http://wallet:8080
       Platform__PrometheusAddress: http://prometheus:9090
+      Platform__CasinoAddress: http://casino:8080
+      Platform__PaymentsAddress: http://payments:8080
+      Platform__ConfigAddress: http://config:8080
+      Steward__AlertWebhookToken: ${STEWARD_ALERT_TOKEN}
       Steward__ModelProvider__Provider: ${STEWARD_MODEL_PROVIDER:-replay}
       Steward__ModelProvider__ReplayDirectory: /app/transcripts
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
