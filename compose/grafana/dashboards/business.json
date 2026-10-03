@@ -1,0 +1,47 @@
+{
+  "uid": "swiftbets-business",
+  "title": "SwiftBets - Business (daily)",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "1m",
+  "time": { "from": "now-30d", "to": "now" },
+  "tags": ["swiftbets", "business"],
+  "panels": [
+    {
+      "id": 1, "type": "stat", "title": "GGR today (R)",
+      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 5 },
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "warehouse" },
+      "targets": [{ "refId": "A", "format": "table", "rawSql": "SELECT (sports_turnover - sports_payouts + casino_staked - casino_returned) / 100.0 AS ggr FROM warehouse.daily_figures WHERE day = (now() AT TIME ZONE 'UTC')::date" }]
+    },
+    {
+      "id": 2, "type": "stat", "title": "Sports turnover today (R)",
+      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 5 },
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "warehouse" },
+      "targets": [{ "refId": "A", "format": "table", "rawSql": "SELECT sports_turnover / 100.0 AS turnover FROM warehouse.daily_figures WHERE day = (now() AT TIME ZONE 'UTC')::date" }]
+    },
+    {
+      "id": 3, "type": "stat", "title": "Coupons today",
+      "gridPos": { "x": 12, "y": 0, "w": 6, "h": 5 },
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "warehouse" },
+      "targets": [{ "refId": "A", "format": "table", "rawSql": "SELECT coupons FROM warehouse.daily_figures WHERE day = (now() AT TIME ZONE 'UTC')::date" }]
+    },
+    {
+      "id": 4, "type": "stat", "title": "Last ledger reconciliation",
+      "gridPos": { "x": 18, "y": 0, "w": 6, "h": 5 },
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "warehouse" },
+      "targets": [{ "refId": "A", "format": "table", "rawSql": "SELECT CASE WHEN matched THEN 'Matches' ELSE 'MISMATCH' END AS result FROM warehouse.reconciliation_runs ORDER BY ran_at DESC LIMIT 1" }]
+    },
+    {
+      "id": 5, "type": "timeseries", "title": "Daily GGR by product (R)",
+      "gridPos": { "x": 0, "y": 5, "w": 24, "h": 9 },
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "warehouse" },
+      "targets": [{ "refId": "A", "format": "time_series", "rawSql": "SELECT day::timestamp AS time, (sports_turnover - sports_payouts) / 100.0 AS sports, (casino_staked - casino_returned) / 100.0 AS casino FROM warehouse.daily_figures WHERE day::timestamp BETWEEN $__timeFrom() AND $__timeTo() ORDER BY 1" }]
+    },
+    {
+      "id": 6, "type": "table", "title": "Daily figures (R)",
+      "gridPos": { "x": 0, "y": 14, "w": 24, "h": 10 },
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "warehouse" },
+      "targets": [{ "refId": "A", "format": "table", "rawSql": "SELECT day, coupons, sports_turnover / 100.0 AS sports_turnover, sports_payouts / 100.0 AS sports_payouts, casino_staked / 100.0 AS casino_staked, casino_returned / 100.0 AS casino_returned, (sports_turnover - sports_payouts + casino_staked - casino_returned) / 100.0 AS ggr FROM warehouse.daily_figures ORDER BY day DESC LIMIT 60" }]
+    }
+  ]
+}

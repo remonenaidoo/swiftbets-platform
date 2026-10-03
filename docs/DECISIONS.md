@@ -721,3 +721,19 @@ A non-idempotent call is retried only when it carries an idempotency key.
 - Liability counts each coupon's whole potential payout on every outcome it backs. That is conservative for accumulators and system bets, which is the safe side for a cap.
 - Pattern windows live in memory, and a restart starts them empty. Alerts are advisory, stored for the console and published.
 - The local `FixtureRegion` routes with `FixtureMessageExtractor`, a `HashCodeMessageExtractor`, so a cluster `ShardRegion` can replace it.
+
+**D151. Customer notifications are driven by domain events; addresses stay off Kafka.**
+- Notifications consumes settled coupons, successful deposits, limits reached and self-exclusions. Each becomes an in-app inbox message and an email, both with ids derived from the event, so a redelivery sends nothing more. Messages are dated by the event.
+- The wallet publishes `wallet.limit-reached.v1` when one of the customer's own limits refuses money. It publishes after the refused transaction rolls back, best effort, at most one notice per limit per day.
+- The email address is looked up at send time from identity's service-only contact endpoint. Suspended and self-excluded accounts are still written to (a break must be confirmed); only a closed account is not. Marketing stays filtered separately.
+- Customers choose email and inbox per event, except break confirmations, which always go out on both. New consumers start at the newest event, so a first deployment never notifies anyone about the backlog.
+
+**D152. The reporting warehouse reconciles to the ledger, not to its own events.**
+- `sb_warehouse` holds facts keyed by their source ids (bets, settlements, payouts, casino transactions) and a daily view. GGR is sports turnover minus payouts, plus casino staked minus returned.
+- Each day reconciles against the wallet's own postings (`/reconciliation/daily-totals`): stakes captured, non-casino credits minus debits, and `casino:` debits and credits. Every figure must match to the cent. The wallet publishes no posting events, so the ledger stays the single source of truth.
+- Finance reads the daily figures in the console and as CSV; Grafana's Business dashboard reads the warehouse through a read-only login.
+
+**D153. The console shows staff only what their permissions allow; the services enforce it.**
+- The session lists the access token's `perm` claims, and the console hides screens without the permission, even at a typed address. Every service still refuses the call.
+- Roles and their permissions are managed in the console (`identity.roles.read`/`write`, Admin only). Admin can never lose role management, and nobody can remove their own Admin role. Changes reach staff at their next sign-in.
+- Finance reports (`reports.read`) are for Admin and Ops; traders don't get them. `trader1` is the demo trader seat, used by the E9 gate.

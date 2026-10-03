@@ -30,12 +30,14 @@ const fixtureId = pick.f.fixtureId;
 const marketId = pick.m.marketId;
 
 const seen = []; // [coupons, receivedAt]
+let lastDelta = null;
 const hub = new HubConnectionBuilder()
   .withUrl(`${gateway}/api/hubs/live`, { headers: { Cookie: ops, 'X-SwiftBets-Csrf': '1' }, transport: HttpTransportType.WebSockets })
   .configureLogging(LogLevel.Warning)
   .build();
 hub.on('delta', (delta) => {
   if (delta.type === 'liability-changed' && delta.payload.fixtureId === fixtureId) {
+    lastDelta = delta.payload;
     const home = delta.payload.outcomes.find((o) => o.marketId === marketId && o.selectionId === 'home');
     seen.push([home?.coupons ?? 0, performance.now()]);
   }
@@ -80,6 +82,7 @@ const p95 = sorted[Math.ceil(sorted.length * 0.95) - 1];
 const max = sorted.at(-1);
 console.log(`fixture=${fixtureId}`);
 console.log(`ok   ${bets} bets at ${concurrency} at a time: ${seen.length} liability deltas; p50 ${sorted[Math.floor(sorted.length / 2)].toFixed(0)} ms, p95 ${p95.toFixed(0)} ms, max ${max.toFixed(0)} ms`);
+if (!Number.isFinite(max)) console.error(`no liability delta counted a placement; last delta for ${fixtureId}: ${JSON.stringify(lastDelta)}`);
 if (!Number.isFinite(max) || max > budgetMs) {
   console.error(`FAIL liability reached the console in ${max.toFixed(0)} ms at worst; the budget is ${budgetMs} ms`);
   process.exit(1);

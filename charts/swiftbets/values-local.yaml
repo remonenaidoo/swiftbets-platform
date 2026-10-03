@@ -18,6 +18,8 @@ localSecrets:
     casino: Local-Dev-Casino-1
     casino-catalog: local-dev-casino-catalog
     risk: local-dev-risk
+    warehouse: local-dev-warehouse
+    grafana-reader: local-dev-grafana-reader
     steward: local-dev-steward
     history: local-dev-history
     catalog: local-dev-catalog
@@ -31,6 +33,8 @@ localSecrets:
     cashout: local-dev-cashout-client-secret
     history: local-dev-history-client-secret
     casino: local-dev-casino-client-secret
+    notifications: local-dev-notifications-client-secret
+    reporting: local-dev-reporting-client-secret
   casinoSimSeamlessSecret: local-dev-sim-seamless-secret-0123456789abcdef
   casinoSimTransferSecret: local-dev-sim-transfer-secret-0123456789abcdef
   # Base64 of 32 bytes; signs cashout quotes. Local only - prod's comes from Terraform.

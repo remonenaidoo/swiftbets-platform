@@ -135,6 +135,8 @@ services:
       CATALOG_DB_PASSWORD: ${CATALOG_DB_PASSWORD}
       CASINO_CATALOG_DB_PASSWORD: ${CASINO_CATALOG_DB_PASSWORD}
       RISK_DB_PASSWORD: ${RISK_DB_PASSWORD}
+      WAREHOUSE_DB_PASSWORD: ${WAREHOUSE_DB_PASSWORD}
+      GRAFANA_READER_PASSWORD: ${GRAFANA_READER_PASSWORD}
     ports: ["127.0.0.1:7134:5432"]
     volumes:
       - postgres:/var/lib/postgresql/data
@@ -191,6 +193,7 @@ services:
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?set GRAFANA_ADMIN_PASSWORD in .env}
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GRAFANA_READER_PASSWORD: ${GRAFANA_READER_PASSWORD}
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
       - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
@@ -249,6 +252,8 @@ services:
       Identity__Clients__placement: ${PLACEMENT_CLIENT_SECRET:?set PLACEMENT_CLIENT_SECRET in .env}
       Identity__Clients__cashout: ${CASHOUT_CLIENT_SECRET:?set CASHOUT_CLIENT_SECRET in .env}
       Identity__Clients__casino: ${CASINO_CLIENT_SECRET:?set CASINO_CLIENT_SECRET in .env}
+      Identity__Clients__notifications: ${NOTIFICATIONS_CLIENT_SECRET:?set NOTIFICATIONS_CLIENT_SECRET in .env}
+      Identity__Clients__reporting: ${REPORTING_CLIENT_SECRET:?set REPORTING_CLIENT_SECRET in .env}
       Identity__Clients__bethistory: ${HISTORY_CLIENT_SECRET:?set HISTORY_CLIENT_SECRET in .env}
       Kafka__ClientId: swiftbets-identity
       AccountEmail__Delivery: Notifications
@@ -402,6 +407,8 @@ services:
       CATALOG_DB_PASSWORD: ${CATALOG_DB_PASSWORD}
       CASINO_CATALOG_DB_PASSWORD: ${CASINO_CATALOG_DB_PASSWORD}
       RISK_DB_PASSWORD: ${RISK_DB_PASSWORD}
+      WAREHOUSE_DB_PASSWORD: ${WAREHOUSE_DB_PASSWORD}
+      GRAFANA_READER_PASSWORD: ${GRAFANA_READER_PASSWORD}
     volumes: ["./postgres:/provision:ro"]
     networks: [swiftbets]
     depends_on:
@@ -598,6 +605,11 @@ services:
       ConnectionStrings__SbNotifications: Host=postgres;Database=sb_notifications;Username=notifications_app;Password=${NOTIFICATIONS_DB_PASSWORD}
       Email__SmtpHost: mailpit
       Email__SmtpPort: "1025"
+      # Looks up a customer's email address at send time, so it never travels on Kafka.
+      Clients__IdentityAddress: http://identity:8080
+      ServiceIdentity__TokenEndpoint: http://identity:8080/auth/token
+      ServiceIdentity__ClientId: notifications
+      ServiceIdentity__ClientSecret: ${NOTIFICATIONS_CLIENT_SECRET}
     healthcheck: { <<: *dotnet-healthcheck, test: ["CMD", "dotnet", "/app/SwiftBets.Notifications.Api.dll", "--healthcheck"] }
     depends_on:
       notifications-migrator: { condition: service_completed_successfully }
@@ -768,6 +780,35 @@ services:
       ConnectionStrings__SbRisk: Host=postgres;Database=sb_risk;Username=risk_app;Password=${RISK_DB_PASSWORD}
     depends_on:
       postgres-provision: { condition: service_completed_successfully }
+
+  reporting-migrator:
+    <<: *migrator
+    image: ghcr.io/remonenaidoo/swiftbets-reporting-migrator:${SWIFTBETS_TAG:-local}
+    build: { context: ../../swiftbets-reporting, dockerfile: deploy/SwiftBets.Reporting.Migrator.Dockerfile }
+    environment:
+      ConnectionStrings__SbWarehouse: Host=postgres;Database=sb_warehouse;Username=warehouse_app;Password=${WAREHOUSE_DB_PASSWORD}
+    depends_on:
+      postgres-provision: { condition: service_completed_successfully }
+
+  # The reporting warehouse: bets, payouts and casino play by day, finance's CSV, and reconciliation to the wallet ledger.
+  reporting:
+    <<: *dotnet-service
+    image: ghcr.io/remonenaidoo/swiftbets-reporting:${SWIFTBETS_TAG:-local}
+    build: { context: ../../swiftbets-reporting, dockerfile: deploy/SwiftBets.Reporting.Api.Dockerfile }
+    environment:
+      <<: *dotnet-env
+      Kafka__ClientId: swiftbets-reporting
+      Jwt__Authority: http://identity:8080
+      Jwt__RequireHttpsMetadata: "false"
+      ConnectionStrings__SbWarehouse: Host=postgres;Database=sb_warehouse;Username=warehouse_app;Password=${WAREHOUSE_DB_PASSWORD}
+      Clients__WalletAddress: http://wallet:8080
+      ServiceIdentity__TokenEndpoint: http://identity:8080/auth/token
+      ServiceIdentity__ClientId: reporting
+      ServiceIdentity__ClientSecret: ${REPORTING_CLIENT_SECRET}
+    healthcheck: { <<: *dotnet-healthcheck, test: ["CMD", "dotnet", "/app/SwiftBets.Reporting.Api.dll", "--healthcheck"] }
+    depends_on:
+      topics: { condition: service_completed_successfully }
+      reporting-migrator: { condition: service_completed_successfully }
 
   # Liability per fixture (one actor each), exposure limits for placement, betting-pattern alerts and the trader API.
   risk:

@@ -11,3 +11,12 @@ datasources:
     type: tempo
     access: proxy
     url: http://tempo:3200
+  # Business dashboards read the reporting warehouse with a read-only login.
+  - name: Warehouse
+    uid: warehouse
+    type: grafana-postgresql-datasource
+    access: proxy
+    url: postgres:5432
+    user: grafana_reader
+    jsonData: { database: sb_warehouse, sslmode: disable, postgresVersion: 1600 }
+    secureJsonData: { password: $GRAFANA_READER_PASSWORD }

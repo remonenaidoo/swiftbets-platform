@@ -82,6 +82,10 @@ topics:
   - name: swiftbets.audit.audit-recorded.v1
     partitions: 6
     retention.ms: 2592000000
+  - name: swiftbets.wallet.limit-reached.v1
+  - name: swiftbets.wallet.limit-reached.v1.dlq
+    retention.ms: 2592000000
+  - name: swiftbets.notifications.inbox-message.v1
   - name: swiftbets.notifications.notification-requested.v1
   - name: swiftbets.notifications.notification-requested.v1.dlq
     retention.ms: 2592000000

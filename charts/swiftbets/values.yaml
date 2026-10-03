@@ -84,6 +84,8 @@ identity:
     Identity__Clients__placement: { key: placement-client-secret }
     Identity__Clients__cashout: { key: cashout-client-secret }
     Identity__Clients__casino: { key: casino-client-secret }
+    Identity__Clients__notifications: { key: notifications-client-secret }
+    Identity__Clients__reporting: { key: reporting-client-secret }
     Identity__Clients__bethistory: { key: history-client-secret }
     Identity__SigningKeyPem: { key: identity-signing-key }
   migrators:
@@ -145,8 +147,12 @@ notifications:
   image: { repository: swiftbets-notifications }
   env:
     Kafka__ClientId: swiftbets-notifications
+    Clients__IdentityAddress: http://identity:8080
+    ServiceIdentity__TokenEndpoint: http://identity:8080/auth/token
+    ServiceIdentity__ClientId: notifications
   secretEnv:
     ConnectionStrings__SbNotifications: { key: sb-notifications }
+    ServiceIdentity__ClientSecret: { key: notifications-client-secret }
   migrators:
     - name: notifications-migrator
       image: { repository: swiftbets-notifications-migrator }
@@ -208,6 +214,25 @@ casino:
       image: { repository: swiftbets-casino-migrator }
       env: { Migrator__AppLogin: casino_app, Migrator__EnsureDatabase: "true" }
       secretEnv: { ConnectionStrings__SbCasino: { key: sb-casino-migrate } }
+
+# Reporting warehouse (E9): daily figures, finance CSV, reconciliation to the wallet ledger.
+reporting:
+  enabled: true
+  image: { repository: swiftbets-reporting }
+  env:
+    Kafka__ClientId: swiftbets-reporting
+    Jwt__Authority: http://identity:8080
+    Jwt__RequireHttpsMetadata: "false"
+    Clients__WalletAddress: http://wallet:8080
+    ServiceIdentity__TokenEndpoint: http://identity:8080/auth/token
+    ServiceIdentity__ClientId: reporting
+  secretEnv:
+    ConnectionStrings__SbWarehouse: { key: sb-warehouse }
+    ServiceIdentity__ClientSecret: { key: reporting-client-secret }
+  migrators:
+    - name: reporting-migrator
+      image: { repository: swiftbets-reporting-migrator }
+      secretEnv: { ConnectionStrings__SbWarehouse: { key: sb-warehouse } }
 
 # Casino catalogue (E5): the lobby API over Postgres sb_casino.
 casino-catalog:
