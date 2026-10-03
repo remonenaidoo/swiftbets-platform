@@ -36,11 +36,11 @@ The order is strict: a fully working core platform first, then expansion. Each i
 |---|---|---|
 | 19 | More sports: tennis, rugby, cricket, basketball; outrights | ☐ |
 | 20 | In-play betting: live markets, bet delay, suspensions | ☐ |
-| 21 | Today's coupon | ☐ |
-| 22 | Booking codes and repeat bet | ☐ |
+| 21 | Today's coupon | ✅ |
+| 22 | Booking codes and repeat bet | ✅ |
 | 23 | Bet builder | ☐ |
 | 24 | Accumulator and odds boosts | ☐ |
-| 25 | Odds format switch (decimal and fractional) | ☐ |
+| 25 | Odds format switch (decimal and fractional) | ✅ |
 | 26 | Trader tools: suspend, settle, manual results for every sport | ☐ |
 
 ## P3. Account and money extras
