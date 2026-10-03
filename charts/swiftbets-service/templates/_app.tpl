@@ -66,6 +66,12 @@ spec:
             periodSeconds: 5
             failureThreshold: 3
           {{- end }}
+          {{- with $v.volumes }}
+          volumeMounts:
+            {{- range . }}
+            - { name: {{ .name }}, mountPath: {{ .mountPath }} }
+            {{- end }}
+          {{- end }}
           resources:
             {{- toYaml ($v.resources | default dict) | nindent 12 }}
           securityContext:
@@ -73,6 +79,18 @@ spec:
             readOnlyRootFilesystem: {{ $v.readOnlyRootFilesystem | default false }}
             capabilities:
               drop: ["ALL"]
+      {{- with $v.volumes }}
+      # A volume claim when one is named, otherwise scratch space that lives as long as the pod.
+      volumes:
+        {{- range . }}
+        - name: {{ .name }}
+          {{- if .claimName }}
+          persistentVolumeClaim: { claimName: {{ .claimName }} }
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        {{- end }}
+      {{- end }}
 ---
 apiVersion: v1
 kind: Service

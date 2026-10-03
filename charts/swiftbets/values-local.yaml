@@ -41,6 +41,8 @@ localSecrets:
   cashoutSigningKey: bG9jYWwtZGV2LWNhc2hvdXQtcXVvdGUtc2lnbmluZy1r
   paymentsSimulatorApiKey: local-dev-simulator-key
   paymentsWebhookSecret: local-dev-simulator-webhook-secret
+  complianceDocumentSigningKey: local-dev-kyc-document-link-signing-key
+  paymentsBankAccountKey: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
 infra:
   sqlserver:
     enabled: true

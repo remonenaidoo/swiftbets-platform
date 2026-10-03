@@ -102,8 +102,13 @@ compliance:
   image: { repository: swiftbets-compliance }
   env:
     Kafka__ClientId: swiftbets-compliance
+    # KYC files: the filesystem adapter on a volume until an object store is configured (D156).
+    Documents__Root: /data/kyc-documents
   secretEnv:
     ConnectionStrings__SbCompliance: { key: sb-compliance }
+    Documents__SigningKey: { key: compliance-document-signing-key }
+  volumes:
+    - { name: kyc-documents, mountPath: /data/kyc-documents }
   migrators:
     - name: compliance-migrator
       image: { repository: swiftbets-compliance-migrator }
@@ -121,7 +126,10 @@ payments:
     ServiceIdentity__ClientId: payments
     Payments__Simulator__BaseUrl: http://payments-simulator:8080
     Payments__DepositProvider: simulator
+    Payments__BankAccounts__ChangeHoldHours: "24"
+    Payments__BankAccounts__ComplianceAddress: http://compliance:8080
   secretEnv:
+    Payments__BankAccounts__EncryptionKey: { key: payments-bank-account-key }
     ConnectionStrings__SbPayments: { key: sb-payments }
     ServiceIdentity__ClientSecret: { key: payments-client-secret }
     Payments__Simulator__ApiKey: { key: payments-simulator-api-key }
