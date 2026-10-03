@@ -25,10 +25,10 @@ The order is strict: a fully working core platform first, then expansion. Each i
 
 | # | Item | Status |
 |---|---|---|
-| 15 | Pragmatic Play seamless-wallet adapter (D155): signed callbacks, IP allowlist, idempotency with original replies, stored-stake refunds, unseen-refund markers, provider error codes | ☐ |
-| 16 | Provider simulator speaking the real Pragmatic format, plus free demo games for test runs | ☐ |
-| 17 | Casino lobby: categories, search, favourites, recently played, demo play | ☐ |
-| 18 | Admin: provider on/off, keys, allowlist, game catalogue, reconciliation | ☐ |
+| 15 | Pragmatic Play seamless-wallet adapter (D155): signed callbacks, IP allowlist, idempotency with original replies, stored-stake refunds, unseen-refund markers, provider error codes | ✅ |
+| 16 | Provider simulator speaking the real Pragmatic format, plus free demo games for test runs | ✅ |
+| 17 | Casino lobby: categories, search, favourites, recently played, demo play | ✅ |
+| 18 | Admin: provider on/off, keys, allowlist, game catalogue, reconciliation | ✅ |
 
 ## P2. Sportsbook depth
 

@@ -547,6 +547,8 @@ services:
       Jwt__Authority: http://identity:8080
       Jwt__RequireHttpsMetadata: "false"
       ConnectionStrings__SbCasinoCatalog: Host=postgres;Database=sb_casino;Username=casino_catalog_app;Password=${CASINO_CATALOG_DB_PASSWORD}
+      # The preview shows newly synced provider games at once; production leaves them hidden until an operator shows them.
+      Casino__ShowNewGames: "true"
     healthcheck: { <<: *dotnet-healthcheck, test: ["CMD", "dotnet", "/app/SwiftBets.Casino.Catalog.Api.dll", "--healthcheck"] }
     depends_on:
       casino-catalog-migrator: { condition: service_completed_successfully }
@@ -565,6 +567,9 @@ services:
       Simulator__GatewayAddress: http://casino:8080
       Simulator__Providers__sim-seamless__Secret: ${CASINO_SIM_SEAMLESS_SECRET}
       Simulator__Providers__sim-transfer__Secret: ${CASINO_SIM_TRANSFER_SECRET}
+      Simulator__PublicBaseUrl: ${PUBLIC_ORIGIN:-http://localhost:7100}/casino-sim
+      Simulator__Providers__pragmatic__Secret: ${CASINO_PRAGMATIC_SECRET:-local-dev-pragmatic-secret-0123456789abcdef}
+      Simulator__Providers__pragmatic__SecureLogin: ${CASINO_PRAGMATIC_SECURE_LOGIN:-swiftbets}
     healthcheck: { <<: *dotnet-healthcheck, test: ["CMD", "dotnet", "/app/SwiftBets.Casino.Simulator.dll", "--healthcheck"] }
     depends_on:
       casino-catalog-migrator: { condition: service_completed_successfully }
@@ -592,6 +597,17 @@ services:
       Clients__ComplianceAddress: http://compliance:8080
       Casino__Providers__sim-seamless__ReportUrl: http://casino-sim:8080/reports
       Casino__Providers__sim-transfer__ReportUrl: http://casino-sim:8080/reports
+      # Pragmatic Play seamless wallet (D155), played against the simulator's Pragmatic mode until a contract supplies real keys.
+      Casino__CredentialKey: ${CASINO_CREDENTIAL_KEY:-}
+      Casino__CatalogAddress: http://casino-catalog:8080
+      Casino__Providers__pragmatic__Protocol: pragmatic
+      Casino__Providers__pragmatic__Secret: ${CASINO_PRAGMATIC_SECRET:-local-dev-pragmatic-secret-0123456789abcdef}
+      Casino__Providers__pragmatic__SecureLogin: ${CASINO_PRAGMATIC_SECURE_LOGIN:-swiftbets}
+      Casino__Providers__pragmatic__ApiBaseUrl: ${CASINO_PRAGMATIC_API_URL:-http://casino-sim:8080/pragmatic}
+      Casino__Providers__pragmatic__DemoBaseUrl: ${CASINO_PRAGMATIC_DEMO_URL:-${PUBLIC_ORIGIN:-http://localhost:7100}/casino-sim/pragmatic}
+      Casino__Providers__pragmatic__ImageBaseUrl: ${CASINO_PRAGMATIC_IMAGE_URL:-${PUBLIC_ORIGIN:-http://localhost:7100}/casino-sim/pragmatic/game_pic}
+      Casino__Providers__pragmatic__AllowedAddresses__0: ${CASINO_PRAGMATIC_ALLOWLIST:-casino-sim}
+      Casino__Providers__pragmatic__ReportUrl: http://casino-sim:8080/reports
     healthcheck: { <<: *dotnet-healthcheck, test: ["CMD", "dotnet", "/app/SwiftBets.Casino.Gateway.Api.dll", "--healthcheck"] }
     depends_on:
       casino-migrator: { condition: service_completed_successfully }
