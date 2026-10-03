@@ -274,7 +274,7 @@ services:
       Identity__Clients__bethistory: ${HISTORY_CLIENT_SECRET:?set HISTORY_CLIENT_SECRET in .env}
       Kafka__ClientId: swiftbets-identity
       AccountEmail__Delivery: Notifications
-      AccountEmail__PublicBaseUrl: ${PUBLIC_BASE_URL:-http://127.0.0.1:7100}
+      AccountEmail__PublicBaseUrl: ${PUBLIC_ORIGIN:-http://127.0.0.1:7100}
     healthcheck: { <<: *dotnet-healthcheck, test: ["CMD", "dotnet", "/app/SwiftBets.Identity.Api.dll", "--healthcheck"] }
     depends_on:
       identity-migrator: { condition: service_completed_successfully }
@@ -333,7 +333,7 @@ services:
       ServiceIdentity__TokenEndpoint: http://identity:8080/auth/token
       ServiceIdentity__ClientId: payments
       ServiceIdentity__ClientSecret: ${PAYMENTS_CLIENT_SECRET}
-      Payments__ReturnUrl: http://127.0.0.1:7100/account/wallet
+      Payments__ReturnUrl: ${PUBLIC_ORIGIN:-http://127.0.0.1:7100}/account/wallet
       Payments__Simulator__BaseUrl: http://payments-simulator:8080
       Payments__Simulator__ApiKey: ${PAYMENTS_SIMULATOR_API_KEY}
       Payments__Simulator__WebhookSecrets__0: ${PAYMENTS_WEBHOOK_SECRET}
