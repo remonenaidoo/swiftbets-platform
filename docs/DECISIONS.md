@@ -752,3 +752,10 @@ A non-idempotent call is retried only when it carries an idempotency key.
 - `docs/BACKLOG.md` is the build order: P0 core money loop, P1 one casino provider, P2 sportsbook depth, P3 account extras, P4 expansion products. Risk stays paused.
 - The casino adapter is Pragmatic Play's seamless wallet: the widest catalogue and a public demo mode, so free games cover test runs without a contract. Other providers follow the same template once contracted.
 - The adapter fixes what weaker integrations get wrong: every callback is signed and comes from an allowlisted address, a repeat returns the original reply, refunds use the recorded stake, and a refund for an unseen bet leaves a marker that refuses the late bet.
+
+**D156. Bet history pages on a keyset cursor; the detail asks settlement for results; statements download from the wallet.**
+- `/me/coupons` keeps its array shape and takes `status`, `betType`, `from`, `to` and `before`. Each item carries an opaque `cursor` (placement time and coupon id); the last one is the next page's `before`. Coupons whose placement has not arrived are left out of the list.
+- The coupon detail adds leg results, every settlement version and any cashout. Bet-history reads them from settlement's coupon state with its service token; if settlement cannot be reached the detail still loads, flagged `resultsAvailable: false`.
+- Staff read a customer's bets with the new `bets.read` permission (Admin, Ops, Trader), on top of the operator role.
+- The statement takes a date range and `/me/wallet/statement.csv` downloads it straight from the ledger: ISO 8601 UTC dates, amounts in rands, at most 10,000 lines. Text cells that start like a formula get a quote prefix.
+- Repeat bet refills the slip with the bet's selections at today's prices and names the ones it skipped because their match or market is no longer open.

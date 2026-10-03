@@ -15,7 +15,7 @@ The order is strict: a fully working core platform first, then expansion. Each i
 | 7 | Core money-loop hardening: end-to-end run of sign-up → deposit → bet → settle → withdraw on the live site, every defect fixed | ⏳ |
 | 8 | Bank account verification and saved bank details for withdrawals | ☐ |
 | 9 | Identity document upload in the site, review queue in admin | ☐ |
-| 10 | Bet history filters, bet detail, downloadable statement | ☐ |
+| 10 | Bet history filters, bet detail, downloadable statement | ✅ |
 | 11 | Results page | ☐ |
 | 12 | Home page: banners, featured matches, quick links, managed from admin | ☐ |
 | 13 | Content pages managed from admin: help, FAQ, terms, privacy, responsible gambling, contact | ☐ |
@@ -37,7 +37,7 @@ The order is strict: a fully working core platform first, then expansion. Each i
 | 19 | More sports: tennis, rugby, cricket, basketball; outrights | ☐ |
 | 20 | In-play betting: live markets, bet delay, suspensions | ☐ |
 | 21 | Today's coupon | ☐ |
-| 22 | Booking codes and repeat bet | ☐ |
+| 22 | Booking codes and repeat bet (repeat bet done, D156) | ☐ |
 | 23 | Bet builder | ☐ |
 | 24 | Accumulator and odds boosts | ☐ |
 | 25 | Odds format switch (decimal and fractional) | ☐ |
