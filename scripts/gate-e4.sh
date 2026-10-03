@@ -34,41 +34,44 @@ jq -c '[.[] | select((.status == "open" or .status == "scheduled") and ((.kickof
   "$work/body" > "$work/legs"
 [[ "$(jq 'length' "$work/legs")" -ge 4 ]] || fail "need four open fixtures, found $(jq 'length' "$work/legs")"
 cp "$work/body" "$work/fixtures"
+# Prices move under the replay feed, so every attempt is built from the latest offer, never a stale quote.
 leg() {
   local i="$1" banker="${2:-false}"
   jq -c --argjson i "$i" --argjson banker "$banker" --slurpfile fx "$work/fixtures" \
-    '.[$i] as $l | {fixtureId: $l.fixtureId, marketId: $l.marketId, selectionId: $l.selectionId, odds: $l.odds,
-      offerVersion: ($fx[0][] | select(.fixtureId == $l.fixtureId) | .offerVersion), banker: $banker}' "$work/legs"
+    '.[$i] as $l | ($fx[0][] | select(.fixtureId == $l.fixtureId)) as $f
+      | ($f.markets[] | select(.marketId == $l.marketId) | .selections[] | select(.selectionId == $l.selectionId)) as $s
+      | {fixtureId: $l.fixtureId, marketId: $l.marketId, selectionId: $l.selectionId, odds: $s.odds, offerVersion: $f.offerVersion, banker: $banker}' "$work/legs"
 }
-single="{\"stake\":1000,\"currency\":\"ZAR\",\"legs\":[$(leg 0)]}"
+refresh() { api punter GET '/fixtures/?limit=50' >/dev/null && cp "$work/body" "$work/fixtures"; }
+single() { refresh; echo "{\"stake\":1000,\"currency\":\"ZAR\",\"legs\":[$(leg 0)]}"; }
+trixie() { refresh; echo "{\"stake\":400,\"currency\":\"ZAR\",\"legs\":[$(leg 0 true),$(leg 1),$(leg 2),$(leg 3)],\"bets\":[{\"name\":\"trixie\",\"unitStake\":100}]}"; }
 
 # 1. Kill switch: placement stops within five seconds and reopens when lifted.
-expect 201 "$(place "$single")" "a single is placed while betting is open"
+expect 201 "$(place "$(single)")" "a single is placed while betting is open"
 expect 200 "$(set_config placement.kill-switch on 'E4 gate drill')" "admin turns the kill switch on"
 started=$(date +%s%N)
-until [[ "$(place "$single")" == 422 ]] && jq -e '.code == "placement_suspended"' "$work/body" >/dev/null; do
+until [[ "$(place "$(single)")" == 422 ]] && jq -e '.code == "placement_suspended"' "$work/body" >/dev/null; do
   (( ($(date +%s%N) - started) / 1000000 <= 5000 )) || fail "placement still open five seconds after the kill switch"
   sleep 0.25
 done
 echo "ok   placement refused $(( ($(date +%s%N) - started) / 1000000 )) ms after the kill switch"
 expect 200 "$(set_config placement.kill-switch off 'E4 gate drill over')" "admin turns the kill switch off"
 started=$(date +%s%N)
-until [[ "$(place "$single")" == 201 ]]; do
+until [[ "$(place "$(single)")" == 201 ]]; do
   (( ($(date +%s%N) - started) / 1000000 <= 5000 )) || fail "placement still closed five seconds after lifting the kill switch: $(head -c 300 "$work/body")"
   sleep 0.25
 done
 echo "ok   placement reopened"
 
 # 2. A banker Trixie: refused while system bets are off, four lines once they are on.
-trixie="{\"stake\":400,\"currency\":\"ZAR\",\"legs\":[$(leg 0 true),$(leg 1),$(leg 2),$(leg 3)],\"bets\":[{\"name\":\"trixie\",\"unitStake\":100}]}"
 current="$(api admin GET /admin/config/ >/dev/null; jq -r '.[] | select(.key == "flags.system-bets") | .value' "$work/body")"
 if [[ "$current" != "true" ]]; then
-  expect 422 "$(place "$trixie")" "a banker Trixie is refused while system bets are off"
+  expect 422 "$(place "$(trixie)")" "a banker Trixie is refused while system bets are off"
   jq -e '.code == "system_bets_unavailable"' "$work/body" >/dev/null || fail "refusal was $(jq -r .code "$work/body")"
   expect 200 "$(set_config flags.system-bets true 'E4 gate: settlement reads V2')" "admin opens system bets"
 fi
 started=$(date +%s%N)
-until [[ "$(place "$trixie")" == 201 ]]; do
+until [[ "$(place "$(trixie)")" == 201 ]]; do
   (( ($(date +%s%N) - started) / 1000000 <= 5000 )) || fail "banker Trixie still refused: $(head -c 300 "$work/body")"
   sleep 0.25
 done
