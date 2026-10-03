@@ -1,0 +1,18 @@
+# Every alert goes to Steward, which opens (or joins) the incident its rule names. One notification per alert and label
+# set; a still-firing alert is re-sent every four hours. Resolved alerts are not sent: a person closes the incident.
+route:
+  receiver: steward
+  group_by: [alertname, provider, template, kind]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+
+receivers:
+  - name: steward
+    webhook_configs:
+      - url: http://steward:8080/alerts/alertmanager
+        send_resolved: false
+        http_config:
+          authorization:
+            type: Bearer
+            credentials_file: /tmp/steward-token
