@@ -752,3 +752,10 @@ A non-idempotent call is retried only when it carries an idempotency key.
 - `docs/BACKLOG.md` is the build order: P0 core money loop, P1 one casino provider, P2 sportsbook depth, P3 account extras, P4 expansion products. Risk stays paused.
 - The casino adapter is Pragmatic Play's seamless wallet: the widest catalogue and a public demo mode, so free games cover test runs without a contract. Other providers follow the same template once contracted.
 - The adapter fixes what weaker integrations get wrong: every callback is signed and comes from an allowlisted address, a repeat returns the original reply, refunds use the recorded stake, and a refund for an unseen bet leaves a marker that refuses the late bet.
+
+**D156. Site content lives in the config service and reaches open clients over realtime.**
+- Banners, quick links and markdown pages are tables in `sb_config` (schema `content`): config already owns operator-managed site behaviour, so no new service or database. Pages keep every version; an unchanged save is not a version.
+- `GET /api/content/home` and `/api/content/pages/{slug}` are public and return only live banners and published pages. The service caches them for 60 seconds and clears the cache on every write; responses are `no-cache` so browsers always ask.
+- Writes need `content.write` (Admin and Ops), are audited, and publish `config.content-changed.v1` through the outbox. Realtime pushes `content-changed` (kind and slug, never the staff member) to the public `offer` group, and the site refetches. A second config replica sees another replica's write within the 60 seconds.
+- Banner images are bundled artwork names, `/static/` paths or https addresses, never bytes in SQL. Links are site paths or https only.
+- Pages render as native text from a small markdown reader (headings, lists, bold, links), so HTML in a page shows as text and never runs. Featured matches stay automatic (the next fixtures from the offer).

@@ -96,6 +96,8 @@ topics:
   # Operational settings, latest per key; placement reads it to the end before it reports ready.
   - name: swiftbets.config.entries.v1
     config: { cleanup.policy: compact }
+  # Site content changed (banners, quick links, pages); realtime nudges open clients to refetch.
+  - name: swiftbets.config.content-changed.v1
   - name: swiftbets.compliance.self-exclusion-started.v1
   - name: swiftbets.compliance.self-exclusion-started.v1.dlq
     retention.ms: 2592000000
