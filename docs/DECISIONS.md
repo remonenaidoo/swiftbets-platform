@@ -752,3 +752,8 @@ A non-idempotent call is retried only when it carries an idempotency key.
 - `docs/BACKLOG.md` is the build order: P0 core money loop, P1 one casino provider, P2 sportsbook depth, P3 account extras, P4 expansion products. Risk stays paused.
 - The casino adapter is Pragmatic Play's seamless wallet: the widest catalogue and a public demo mode, so free games cover test runs without a contract. Other providers follow the same template once contracted.
 - The adapter fixes what weaker integrations get wrong: every callback is signed and comes from an allowlisted address, a repeat returns the original reply, refunds use the recorded stake, and a refund for an unseen bet leaves a marker that refuses the late bet.
+
+**D156. Results live in the offer catalogue; the newest write wins.**
+- The offer service records each published feed result version and each trader's fixture or market result on `catalog.fixtures` (goals, status, source, `resulted_at`). Whatever was written last stands, so a manual correction replaces the feed result and keeps the feed's score when it carries none. Coupon-scope manual results do not touch it.
+- `GET /fixtures/results` (sport, competition, 1 to 14 days, default 3) feeds the customer Results page and the trader's recent-results list, where the source shows and Correct opens the manual-result form.
+- There is no result delta on the live stream: a fixture going to full time re-reads the list after a short delay.
