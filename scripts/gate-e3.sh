@@ -78,8 +78,19 @@ echo "ok   credited exactly once despite duplicate and out-of-order webhooks"
 curl -sS -o /dev/null -X PUT "$simulator/__faults" -H 'Content-Type: application/json' -d '{}'
 
 # 3. KYC, then a small withdrawal pays and a large one waits for an operator.
-expect 200 "$(api c POST /me/kyc -d '{"documentType":"idDocument","documentNumber":"8001015009087"}')" "KYC submitted"
+# Documents go to the review queue, an operator approves, then a bank account in that name verifies.
+printf '\x89PNG\r\n\x1a\n\0\0\0\rIHDR\0\0\0\x01\0\0\0\x01\x08\x06\0\0\0\x1f\x15\xc4\x89' > "$work/id.png"
+printf '%%PDF-1.4\n%%%%EOF\n' > "$work/poa.pdf"
+code="$(curl -sS -o "$work/body" -w '%{http_code}' -b "$work/c" -c "$work/c" -X POST "$gateway/api/me/kyc/documents" -H 'X-SwiftBets-Csrf: 1' \
+  -F documentType=idDocument -F documentNumber=8001015009087 -F 'legalName=Gate Three' -F "identity=@$work/id.png;type=image/png" -F "proofOfAddress=@$work/poa.pdf;type=application/pdf")"
+expect '20[01]' "$code" "KYC documents uploaded"
+expect 200 "$(api c GET /profile)" "customer profile" && cp "$work/body" "$work/profile"
+expect 200 "$(api o GET /admin/kyc/queue)" "operator sees the KYC queue"
+case_id="$(jq -r --arg u "$(jq -r '.userId' "$work/profile")" '[.[] | select(.userId == $u)][0].caseId' "$work/body")"
+expect '20[04]' "$(api o POST "/admin/kyc/cases/$case_id/approve" -d '{"reason":"gate check"}')" "operator approves KYC"
 until_true c /me/compliance '.kycStatus == "verified"' "KYC verified"
+expect 200 "$(api c PUT /me/bank-account -d '{"bankCode":"fnb","accountHolder":"G Three","accountNumber":"62000001234","accountType":"cheque"}')" "bank account saved"
+[[ "$(jq -r '.status' "$work/body")" == "verified" ]] || fail "bank account is $(jq -r '.status' "$work/body"), wanted verified"
 sleep 3
 expect 201 "$(api c POST /me/withdrawals -d '{"amount":20000,"currency":"ZAR"}')" "small withdrawal accepted"
 small="$(jq -r '.withdrawalId' "$work/body")"
