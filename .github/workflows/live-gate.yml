@@ -86,6 +86,8 @@ jobs:
         run: swiftbets-platform/scripts/gate-e4b.sh
       - name: Gate E5 (casino)
         run: swiftbets-platform/scripts/gate-e5.sh
+      - name: Gate P1 (Pragmatic Play seamless wallet)
+        run: swiftbets-platform/scripts/gate-p1.sh
       - name: "Gate E11 (Alertmanager to Steward)"
         run: swiftbets-platform/scripts/gate-e11.sh
         env: { ALERTMANAGER: "http://127.0.0.1:7193" }
