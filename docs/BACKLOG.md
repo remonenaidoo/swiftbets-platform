@@ -47,8 +47,8 @@ The order is strict: a fully working core platform first, then expansion. Each i
 
 | # | Item | Status |
 |---|---|---|
-| 27 | Bonus wallet: bonus balance, wagering, free bets | ☑ |
-| 28 | Promotions opt-in and admin promotion builder | ☑ |
+| 27 | Bonus wallet: bonus balance, wagering, free bets | ✅ D166 |
+| 28 | Promotions opt-in and admin promotion builder | ✅ D166 |
 | 29 | Cash vouchers: buy, redeem, print | ☐ |
 | 30 | Refer-a-friend | ☐ |
 | 31 | Airtime and data from the wallet | ☐ |
