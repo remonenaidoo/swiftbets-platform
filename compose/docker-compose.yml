@@ -881,6 +881,7 @@ services:
       Gateway__DemoSignIn__PunterUsername: ${GATEWAY_DEMO_SIGN_IN_PUNTER:-}
       Gateway__DemoSignIn__Password: ${GATEWAY_DEMO_SIGN_IN_PASSWORD:-}
       Gateway__RateLimits__LoginPerMinute: ${GATEWAY_LOGIN_PER_MINUTE:-600}
+      Gateway__RateLimits__AccountEmailsPerTenMinutes: ${GATEWAY_ACCOUNT_EMAILS_PER_TEN_MINUTES:-5}
       Gateway__RateLimits__PlacementsPerUserPerMinute: ${GATEWAY_PLACEMENTS_PER_USER_PER_MINUTE:-20000}
       Gateway__RateLimits__RequestsPerIpPerMinute: ${GATEWAY_REQUESTS_PER_IP_PER_MINUTE:-200000}
     # The second port is for a reverse proxy on the host (e.g. a public preview): set GATEWAY_EDGE_BIND=172.17.0.1.
@@ -893,6 +894,9 @@ services:
   web:
     image: ghcr.io/remonenaidoo/swiftbets-web:${SWIFTBETS_TAG:-local}
     build: { context: ../../swiftbets-mobile, dockerfile: Dockerfile }
+    environment:
+      # Game provider origins the casino may frame (the site CSP's frame-src); the simulators are same-origin.
+      CASINO_FRAME_ORIGINS: ${CASINO_FRAME_ORIGINS:-}
     ports: ["127.0.0.1:7111:8080"]
     networks: [swiftbets]
     mem_limit: 64m
