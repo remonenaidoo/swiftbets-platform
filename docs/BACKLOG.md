@@ -13,8 +13,8 @@ The order is strict: a fully working core platform first, then expansion. Each i
 | 5 | Limits, self-exclusion, cool-off, inbox, email notifications | ✅ |
 | 6 | Real odds feed live on the preview (API-Football adapter; needs the key) | ⏳ |
 | 7 | Core money-loop hardening: end-to-end run of sign-up → deposit → bet → settle → withdraw on the live site, every defect fixed | ⏳ |
-| 8 | Bank account verification and saved bank details for withdrawals | ☐ |
-| 9 | Identity document upload in the site, review queue in admin | ☐ |
+| 8 | Bank account verification and saved bank details for withdrawals | ✅ |
+| 9 | Identity document upload in the site, review queue in admin | ✅ |
 | 10 | Bet history filters, bet detail, downloadable statement | ☐ |
 | 11 | Results page | ☐ |
 | 12 | Home page: banners, featured matches, quick links, managed from admin | ☐ |
