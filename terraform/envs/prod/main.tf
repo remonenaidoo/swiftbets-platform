@@ -38,13 +38,13 @@ module "azure_sql" {
 }
 
 resource "random_password" "db" {
-  for_each = toset(concat(local.services, ["steward", "history", "notifications", "config", "catalog", "casino-catalog", "risk", "postgres"]))
+  for_each = toset(concat(local.services, ["steward", "history", "notifications", "config", "catalog", "casino-catalog", "risk", "warehouse", "grafana-reader", "postgres"]))
   length   = 32
   special  = false
 }
 
 resource "random_password" "client" {
-  for_each = toset(["payout", "steward", "demo", "payments", "payments-simulator", "payments-webhook", "placement", "cashout", "history", "casino", "casino-sim-seamless", "casino-sim-transfer"])
+  for_each = toset(["payout", "steward", "demo", "payments", "payments-simulator", "payments-webhook", "placement", "cashout", "history", "casino", "casino-sim-seamless", "casino-sim-transfer", "notifications", "reporting"])
   length   = 32
   special  = false
 }
@@ -76,37 +76,42 @@ resource "kubernetes_secret_v1" "swiftbets" {
   }
   data = merge(
     {
-      "demo-password"              = random_password.client["demo"].result
-      "sqlserver-sa-password"      = module.azure_sql.admin_password
-      "postgres-password"          = random_password.db["postgres"].result
-      "payout-client-secret"       = random_password.client["payout"].result
-      "steward-client-secret"      = random_password.client["steward"].result
-      "payments-client-secret"     = random_password.client["payments"].result
-      "placement-client-secret"    = random_password.client["placement"].result
-      "cashout-client-secret"      = random_password.client["cashout"].result
-      "casino-client-secret"       = random_password.client["casino"].result
-      "casino-sim-seamless-secret" = random_password.client["casino-sim-seamless"].result
-      "casino-sim-transfer-secret" = random_password.client["casino-sim-transfer"].result
-      "history-client-secret"      = random_password.client["history"].result
-      "cashout-signing-key"        = random_id.cashout_signing.b64_std
-      "payments-simulator-api-key" = random_password.client["payments-simulator"].result
-      "payments-webhook-secret"    = random_password.client["payments-webhook"].result
-      "steward-db-password"        = random_password.db["steward"].result
-      "history-db-password"        = random_password.db["history"].result
-      "notifications-db-password"  = random_password.db["notifications"].result
-      "config-db-password"         = random_password.db["config"].result
-      "catalog-db-password"        = random_password.db["catalog"].result
-      "casino-catalog-db-password" = random_password.db["casino-catalog"].result
-      "risk-db-password"           = random_password.db["risk"].result
-      "sb-steward"                 = "Host=postgres;Database=sb_steward;Username=steward_app;Password=${random_password.db["steward"].result}"
-      "sb-history"                 = "Host=postgres;Database=sb_history;Username=history_app;Password=${random_password.db["history"].result}"
-      "sb-notifications"           = "Host=postgres;Database=sb_notifications;Username=notifications_app;Password=${random_password.db["notifications"].result}"
-      "sb-config"                  = "Host=postgres;Database=sb_config;Username=config_app;Password=${random_password.db["config"].result}"
-      "sb-catalog"                 = "Host=postgres;Database=sb_catalog;Username=catalog_app;Password=${random_password.db["catalog"].result}"
-      "sb-casino-catalog"          = "Host=postgres;Database=sb_casino;Username=casino_catalog_app;Password=${random_password.db["casino-catalog"].result}"
-      "sb-risk"                    = "Host=postgres;Database=sb_risk;Username=risk_app;Password=${random_password.db["risk"].result}"
-      "anthropic-api-key"          = var.anthropic_api_key
-      "identity-signing-key"       = tls_private_key.identity.private_key_pem
+      "demo-password"               = random_password.client["demo"].result
+      "sqlserver-sa-password"       = module.azure_sql.admin_password
+      "postgres-password"           = random_password.db["postgres"].result
+      "payout-client-secret"        = random_password.client["payout"].result
+      "steward-client-secret"       = random_password.client["steward"].result
+      "payments-client-secret"      = random_password.client["payments"].result
+      "placement-client-secret"     = random_password.client["placement"].result
+      "cashout-client-secret"       = random_password.client["cashout"].result
+      "casino-client-secret"        = random_password.client["casino"].result
+      "notifications-client-secret" = random_password.client["notifications"].result
+      "reporting-client-secret"     = random_password.client["reporting"].result
+      "casino-sim-seamless-secret"  = random_password.client["casino-sim-seamless"].result
+      "casino-sim-transfer-secret"  = random_password.client["casino-sim-transfer"].result
+      "history-client-secret"       = random_password.client["history"].result
+      "cashout-signing-key"         = random_id.cashout_signing.b64_std
+      "payments-simulator-api-key"  = random_password.client["payments-simulator"].result
+      "payments-webhook-secret"     = random_password.client["payments-webhook"].result
+      "steward-db-password"         = random_password.db["steward"].result
+      "history-db-password"         = random_password.db["history"].result
+      "notifications-db-password"   = random_password.db["notifications"].result
+      "config-db-password"          = random_password.db["config"].result
+      "catalog-db-password"         = random_password.db["catalog"].result
+      "casino-catalog-db-password"  = random_password.db["casino-catalog"].result
+      "risk-db-password"            = random_password.db["risk"].result
+      "warehouse-db-password"       = random_password.db["warehouse"].result
+      "grafana-reader-password"     = random_password.db["grafana-reader"].result
+      "sb-steward"                  = "Host=postgres;Database=sb_steward;Username=steward_app;Password=${random_password.db["steward"].result}"
+      "sb-history"                  = "Host=postgres;Database=sb_history;Username=history_app;Password=${random_password.db["history"].result}"
+      "sb-notifications"            = "Host=postgres;Database=sb_notifications;Username=notifications_app;Password=${random_password.db["notifications"].result}"
+      "sb-config"                   = "Host=postgres;Database=sb_config;Username=config_app;Password=${random_password.db["config"].result}"
+      "sb-catalog"                  = "Host=postgres;Database=sb_catalog;Username=catalog_app;Password=${random_password.db["catalog"].result}"
+      "sb-casino-catalog"           = "Host=postgres;Database=sb_casino;Username=casino_catalog_app;Password=${random_password.db["casino-catalog"].result}"
+      "sb-risk"                     = "Host=postgres;Database=sb_risk;Username=risk_app;Password=${random_password.db["risk"].result}"
+      "sb-warehouse"                = "Host=postgres;Database=sb_warehouse;Username=warehouse_app;Password=${random_password.db["warehouse"].result}"
+      "anthropic-api-key"           = var.anthropic_api_key
+      "identity-signing-key"        = tls_private_key.identity.private_key_pem
     },
     { for s in local.services : "${s}-db-password" => random_password.db[s].result },
     { for s in local.services : "sb-${s}" => "Server=tcp:${module.azure_sql.server_fqdn},1433;Database=Sb${title(s)};User Id=${s}_app;Password=${random_password.db[s].result};Encrypt=True;TrustServerCertificate=False" },

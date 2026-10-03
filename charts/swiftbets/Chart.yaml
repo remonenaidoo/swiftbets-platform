@@ -28,6 +28,7 @@ dependencies:
   - { name: steward, version: 0.1.0, repository: file://../steward }
   - { name: realtime, version: 0.1.0, repository: file://../realtime }
   - { name: risk, version: 0.1.0, repository: file://../risk }
+  - { name: reporting, version: 0.1.0, repository: file://../reporting, condition: reporting.enabled }
   - { name: gateway, version: 0.1.0, repository: file://../gateway }
   - { name: dashboard, version: 0.1.0, repository: file://../dashboard }
   - { name: site, version: 0.1.0, repository: file://../site, condition: site.enabled }

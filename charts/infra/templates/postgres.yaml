@@ -54,6 +54,10 @@ spec:
               valueFrom: { secretKeyRef: { name: {{ .Values.secretName }}, key: casino-catalog-db-password } }
             - name: RISK_DB_PASSWORD
               valueFrom: { secretKeyRef: { name: {{ .Values.secretName }}, key: risk-db-password } }
+            - name: WAREHOUSE_DB_PASSWORD
+              valueFrom: { secretKeyRef: { name: {{ .Values.secretName }}, key: warehouse-db-password } }
+            - name: GRAFANA_READER_PASSWORD
+              valueFrom: { secretKeyRef: { name: {{ .Values.secretName }}, key: grafana-reader-password } }
           readinessProbe:
             exec: { command: ["pg_isready", "-U", "postgres"] }
             periodSeconds: 5
