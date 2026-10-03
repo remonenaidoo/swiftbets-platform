@@ -19,7 +19,7 @@ The order is strict: a fully working core platform first, then expansion. Each i
 | 11 | Results page | ☐ |
 | 12 | Home page: banners, featured matches, quick links, managed from admin | ☐ |
 | 13 | Content pages managed from admin: help, FAQ, terms, privacy, responsible gambling, contact | ☐ |
-| 14 | Session security: HttpOnly token handling, security headers and CSP enforced, server-side ownership on every customer route | ☐ |
+| 14 | Session security: HttpOnly token handling, security headers and CSP enforced, server-side ownership on every customer route | ✅ |
 
 ## P1. One casino provider, done perfectly
 
