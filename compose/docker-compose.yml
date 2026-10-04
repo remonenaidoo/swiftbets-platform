@@ -709,6 +709,7 @@ services:
       Jwt__Authority: http://identity:8080
       Jwt__RequireHttpsMetadata: "false"
       ConnectionStrings__SbWallet: Server=sqlserver,1433;Database=SbWallet;User Id=wallet_app;Password=${WALLET_DB_PASSWORD};TrustServerCertificate=True
+      Wallet__Vouchers__CodeSecret: ${WALLET_VOUCHER_CODE_SECRET:?set WALLET_VOUCHER_CODE_SECRET in .env}
     healthcheck: { <<: *dotnet-healthcheck, test: ["CMD", "dotnet", "/app/SwiftBets.Wallet.Api.dll", "--healthcheck"] }
     depends_on:
       wallet-migrator: { condition: service_completed_successfully }

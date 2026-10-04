@@ -49,9 +49,9 @@ The order is strict: a fully working core platform first, then expansion. Each i
 |---|---|---|
 | 27 | Bonus wallet: bonus balance, wagering, free bets | ☐ |
 | 28 | Promotions opt-in and admin promotion builder | ☐ |
-| 29 | Cash vouchers: buy, redeem, print | ☐ |
-| 30 | Refer-a-friend | ☐ |
-| 31 | Airtime and data from the wallet | ☐ |
+| 29 | Cash vouchers: buy, redeem, print | ✅ |
+| 30 | Refer-a-friend | ✅ |
+| 31 | Airtime and data from the wallet | ✅ |
 | 32 | Push and SMS notifications with regional routing; marketing preferences | ☐ |
 | 33 | Device fingerprinting and fraud signals | ☐ |
 

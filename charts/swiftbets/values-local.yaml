@@ -39,6 +39,7 @@ localSecrets:
   casinoSimTransferSecret: local-dev-sim-transfer-secret-0123456789abcdef
   # Base64 of 32 bytes; signs cashout quotes. Local only - prod's comes from Terraform.
   cashoutSigningKey: bG9jYWwtZGV2LWNhc2hvdXQtcXVvdGUtc2lnbmluZy1r
+  walletVoucherCodeSecret: local-dev-voucher-code-secret-0123456789
   paymentsSimulatorApiKey: local-dev-simulator-key
   paymentsWebhookSecret: local-dev-simulator-webhook-secret
   complianceDocumentSigningKey: local-dev-kyc-document-link-signing-key

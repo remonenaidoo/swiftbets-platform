@@ -287,6 +287,7 @@ wallet:
     Kafka__ClientId: swiftbets-wallet
   secretEnv:
     ConnectionStrings__SbWallet: { key: sb-wallet }
+    Wallet__Vouchers__CodeSecret: { key: wallet-voucher-code-secret }
   migrators:
     - name: wallet-migrator
       image: { repository: swiftbets-wallet-migrator }
