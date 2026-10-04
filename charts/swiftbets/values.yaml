@@ -84,6 +84,7 @@ identity:
     Identity__Clients__placement: { key: placement-client-secret }
     Identity__Clients__cashout: { key: cashout-client-secret }
     Identity__Clients__casino: { key: casino-client-secret }
+    Identity__Clients__racing: { key: racing-client-secret }
     Identity__Clients__notifications: { key: notifications-client-secret }
     Identity__Clients__reporting: { key: reporting-client-secret }
     Identity__Clients__bethistory: { key: history-client-secret }
@@ -222,6 +223,39 @@ casino:
       image: { repository: swiftbets-casino-migrator }
       env: { Migrator__AppLogin: casino_app, Migrator__EnsureDatabase: "true" }
       secretEnv: { ConnectionStrings__SbCasino: { key: sb-casino-migrate } }
+
+# Horse racing (P4): race cards, fixed odds and tote pools; money through the wallet under racing: keys.
+racing:
+  # Off until swiftbets-racing publishes its images; compose runs it on the preview.
+  enabled: false
+  image: { repository: swiftbets-racing }
+  env:
+    Kafka__ClientId: swiftbets-racing
+    Wallet__GrpcAddress: http://wallet:8081
+    Clients__WalletAddress: http://wallet:8080
+    Clients__ComplianceAddress: http://compliance:8080
+    ServiceIdentity__TokenEndpoint: http://identity:8080/auth/token
+    ServiceIdentity__ClientId: racing
+    Racing__ToteAddress: http://racing-sim:8080
+  secretEnv:
+    ConnectionStrings__SbRacing: { key: sb-racing }
+    ServiceIdentity__ClientSecret: { key: racing-client-secret }
+    Racing__ToteSecret: { key: racing-tote-secret }
+  migrators:
+    - name: racing-migrator
+      image: { repository: swiftbets-racing-migrator }
+      env: { Migrator__AppLogin: racing_app, Migrator__EnsureDatabase: "true" }
+      secretEnv: { ConnectionStrings__SbRacing: { key: sb-racing-migrate } }
+
+# The simulated tote operator; its feed goes to racing, signed with the shared tote secret.
+racing-sim:
+  enabled: false
+  image: { repository: swiftbets-racing-sim }
+  env:
+    Simulator__RacingAddress: http://racing:8080
+  secretEnv:
+    ConnectionStrings__SbRacing: { key: sb-racing }
+    Simulator__Secret: { key: racing-tote-secret }
 
 # Reporting warehouse (E9): daily figures, finance CSV, reconciliation to the wallet ledger.
 reporting:

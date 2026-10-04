@@ -115,6 +115,7 @@ services:
       SETTLEMENT_DB_PASSWORD: ${SETTLEMENT_DB_PASSWORD}
       PAYOUT_DB_PASSWORD: ${PAYOUT_DB_PASSWORD}
       CASINO_DB_PASSWORD: ${CASINO_DB_PASSWORD}
+      RACING_DB_PASSWORD: ${RACING_DB_PASSWORD:?set RACING_DB_PASSWORD in .env}
       IDENTITY_DB_PASSWORD: ${IDENTITY_DB_PASSWORD}
       COMPLIANCE_DB_PASSWORD: ${COMPLIANCE_DB_PASSWORD}
       PAYMENTS_DB_PASSWORD: ${PAYMENTS_DB_PASSWORD}
@@ -269,6 +270,7 @@ services:
       Identity__Clients__placement: ${PLACEMENT_CLIENT_SECRET:?set PLACEMENT_CLIENT_SECRET in .env}
       Identity__Clients__cashout: ${CASHOUT_CLIENT_SECRET:?set CASHOUT_CLIENT_SECRET in .env}
       Identity__Clients__casino: ${CASINO_CLIENT_SECRET:?set CASINO_CLIENT_SECRET in .env}
+      Identity__Clients__racing: ${RACING_CLIENT_SECRET:?set RACING_CLIENT_SECRET in .env}
       Identity__Clients__notifications: ${NOTIFICATIONS_CLIENT_SECRET:?set NOTIFICATIONS_CLIENT_SECRET in .env}
       Identity__Clients__reporting: ${REPORTING_CLIENT_SECRET:?set REPORTING_CLIENT_SECRET in .env}
       Identity__Clients__bethistory: ${HISTORY_CLIENT_SECRET:?set HISTORY_CLIENT_SECRET in .env}
@@ -597,6 +599,56 @@ services:
       casino-migrator: { condition: service_completed_successfully }
       wallet: { condition: service_healthy }
       topics: { condition: service_completed_successfully }
+
+  racing-migrator:
+    <<: *migrator
+    image: ghcr.io/remonenaidoo/swiftbets-racing-migrator:${SWIFTBETS_TAG:-local}
+    build: { context: ../../swiftbets-racing, dockerfile: deploy/SwiftBets.Racing.Migrator.Dockerfile }
+    environment:
+      ConnectionStrings__SbRacing: Server=sqlserver,1433;Database=SbRacing;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True
+      Migrator__EnsureDatabase: "true"
+      Migrator__AppLogin: racing_app
+    depends_on:
+      sqlserver-init: { condition: service_completed_successfully }
+
+  # Horse racing (P4): race cards, fixed odds and tote pools; bets move money through the wallet under racing: keys.
+  racing:
+    <<: *dotnet-service
+    image: ghcr.io/remonenaidoo/swiftbets-racing:${SWIFTBETS_TAG:-local}
+    build: { context: ../../swiftbets-racing, dockerfile: deploy/SwiftBets.Racing.Api.Dockerfile }
+    environment:
+      <<: *dotnet-env
+      Kafka__ClientId: swiftbets-racing
+      Jwt__Authority: http://identity:8080
+      Jwt__RequireHttpsMetadata: "false"
+      ConnectionStrings__SbRacing: Server=sqlserver,1433;Database=SbRacing;User Id=racing_app;Password=${RACING_DB_PASSWORD};TrustServerCertificate=True
+      Wallet__GrpcAddress: http://wallet:8081
+      Clients__WalletAddress: http://wallet:8080
+      Clients__ComplianceAddress: http://compliance:8080
+      ServiceIdentity__TokenEndpoint: http://identity:8080/auth/token
+      ServiceIdentity__ClientId: racing
+      ServiceIdentity__ClientSecret: ${RACING_CLIENT_SECRET}
+      Racing__ToteAddress: http://racing-sim:8080
+      Racing__ToteSecret: ${RACING_TOTE_SECRET:?set RACING_TOTE_SECRET in .env}
+    healthcheck: { <<: *dotnet-healthcheck, test: ["CMD", "dotnet", "/app/SwiftBets.Racing.Api.dll", "--healthcheck"] }
+    depends_on:
+      racing-migrator: { condition: service_completed_successfully }
+      wallet: { condition: service_healthy }
+      topics: { condition: service_completed_successfully }
+
+  # The simulated tote operator: runs two meetings at a time on a compressed clock and sends the signed feed to racing.
+  racing-sim:
+    <<: *dotnet-service
+    image: ghcr.io/remonenaidoo/swiftbets-racing-sim:${SWIFTBETS_TAG:-local}
+    build: { context: ../../swiftbets-racing, dockerfile: deploy/SwiftBets.Racing.Simulator.Dockerfile }
+    environment:
+      <<: *dotnet-env
+      ConnectionStrings__SbRacing: Server=sqlserver,1433;Database=SbRacing;User Id=racing_app;Password=${RACING_DB_PASSWORD};TrustServerCertificate=True
+      Simulator__RacingAddress: http://racing:8080
+      Simulator__Secret: ${RACING_TOTE_SECRET}
+    healthcheck: { <<: *dotnet-healthcheck, test: ["CMD", "dotnet", "/app/SwiftBets.Racing.Simulator.dll", "--healthcheck"] }
+    depends_on:
+      racing-migrator: { condition: service_completed_successfully }
 
   # Cashout: stateless quotes at live odds; execute goes through settlement's final-state lock over gRPC.
   cashout:
