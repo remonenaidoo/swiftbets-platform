@@ -54,6 +54,11 @@ resource "random_id" "cashout_signing" {
   byte_length = 32
 }
 
+# Derives cash voucher codes from their issue keys (D168): 32 random bytes, base64.
+resource "random_id" "voucher_codes" {
+  byte_length = 32
+}
+
 # The identity service's RS256 signing key: stable across restarts and shared by every replica.
 resource "tls_private_key" "identity" {
   algorithm = "RSA"
@@ -91,6 +96,7 @@ resource "kubernetes_secret_v1" "swiftbets" {
       "casino-sim-transfer-secret"  = random_password.client["casino-sim-transfer"].result
       "history-client-secret"       = random_password.client["history"].result
       "cashout-signing-key"         = random_id.cashout_signing.b64_std
+      "wallet-voucher-code-secret"  = random_id.voucher_codes.b64_std
       "payments-simulator-api-key"  = random_password.client["payments-simulator"].result
       "payments-webhook-secret"     = random_password.client["payments-webhook"].result
       "steward-db-password"         = random_password.db["steward"].result

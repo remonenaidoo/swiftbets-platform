@@ -760,3 +760,24 @@ A non-idempotent call is retried only when it carries an idempotency key.
 - Customers upload an ID or passport and a proof of address (JPG, PNG or PDF up to 10 MB, the type read from the file's own bytes). Files go to object storage behind `IDocumentStore` and never to the database. The preview has no S3-compatible store in compose, so it uses the filesystem adapter on the named volume `kyc-documents`; an S3 adapter slots in behind the same interface.
 - Staff open files only through links signed for five minutes that also need `compliance.read`. Deciding needs `compliance.write` and a reason, and goes through the same audited KYC change as a provider decision, so approval sets the KYC status that withdrawals already check. The customer is told by inbox and email.
 - The name given with the documents is the verified name the bank check matches against; compliance serves it to services only.
+
+**D168. Cash vouchers live in the wallet, as a liability account and one locked posting per step.**
+- A voucher's money sits in a voucher liability account per currency (account kind 4). Buying moves it from the buyer's balance, a retail batch from funding (cash taken at a shop), a promotion batch from the house. Redeeming moves it into the redeemer's account; voiding moves it back where it came from.
+- Each step is one keyed posting written with the voucher row held under UPDLOCK and HOLDLOCK, so a voucher is spent once however many requests race. A repeat by the same customer returns the first result.
+- Codes are 16 characters from an alphabet without look-alikes (no 0, O, 1, I or L) with a Luhn mod 31 check character, printed in groups of four. A code is derived from its issue key with HMAC under `Wallet:Vouchers:CodeSecret` and only its SHA-256 is stored, so the database alone cannot produce a code, a retried purchase returns the same code, and staff can reprint a batch.
+- Vouchers expire after 12 months and are single use. Redeeming counts as a deposit for limits and blocks; buying is refused while the customer is excluded or blocked from betting or withdrawing.
+- Five wrong codes from a customer, or twenty from one address, in 15 minutes lock redeeming for an hour (HTTP 429 with Retry-After). Addresses are kept only as hashes.
+- Staff search, issue batches of up to 500, reprint a batch as CSV and void with a reason under `payments.read` and `payments.approve`. A recipient email gets the code through the notifications template `wallet.voucher-gift`.
+- Ledger reconciliation (D152) gains a check that each liability account equals the vouchers still open in its currency.
+
+**D169. Refer-a-friend runs in payments and pays cash until the bonus wallet can be credited.**
+- Payments holds what the rules need: compliance's KYC snapshot, the saved bank accounts, and the wallet client. Placed coupons (`placement.coupon-placed.v2`) count toward the qualifying stake, once per coupon, inside the window.
+- A new customer claims a code before their first deposit. Once they have verified their identity and staked the qualifying amount, the referrer is rewarded. Staff set the stake, window, reward and monthly cap in the console, and can approve or reject any undecided referral with a reason.
+- A referral is disqualified when the two customers were seen on the same address or device id (kept only as hashes) or saved the same bank account (compared after decryption inside payments). Rewards past the referrer's monthly cap wait as over the cap for staff to decide.
+- The reward is a wallet credit from the house with a `promo:` key, so the warehouse's day totals leave it out of sports payouts. The bonus wallet's credit path is not on main yet; when it lands, rewards should move to bonus money (a TODO in `ReferralHandler`).
+
+**D170. Airtime and data are bought from the wallet through a provider port, held first and refunded on failure.**
+- `IAirtimeProvider` fronts an aggregator for Vodacom, MTN, Cell C and Telkom: open-amount airtime and fixed data bundles. The preview uses the payments simulator's `/v1/airtime`.
+- An order is recorded, its price held in the wallet, then the provider is asked. A fulfilled order pays the hold out; a failed one returns it automatically. The status changes first, so the payments sweep finishes any order a crash or a silent provider left, asking the provider by our reference before buying again.
+- The client request id makes a repeated purchase return the same order. A daily limit per customer (`Payments:Airtime:DailyLimit`, R1 000 by default) is checked and the order written under one range lock.
+- Customers buy on the betting site; staff see orders, masked numbers and refunds in the console under `payments.read`.
