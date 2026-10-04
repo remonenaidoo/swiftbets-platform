@@ -760,3 +760,13 @@ A non-idempotent call is retried only when it carries an idempotency key.
 - Customers upload an ID or passport and a proof of address (JPG, PNG or PDF up to 10 MB, the type read from the file's own bytes). Files go to object storage behind `IDocumentStore` and never to the database. The preview has no S3-compatible store in compose, so it uses the filesystem adapter on the named volume `kyc-documents`; an S3 adapter slots in behind the same interface.
 - Staff open files only through links signed for five minutes that also need `compliance.read`. Deciding needs `compliance.write` and a reason, and goes through the same audited KYC change as a provider decision, so approval sets the KYC status that withdrawals already check. The customer is told by inbox and email.
 - The name given with the documents is the verified name the bank check matches against; compliance serves it to services only.
+
+**D172. Push and SMS go through notifications, with regional SMS routing and marketing kept apart from service messages.**
+- Channels are email, inbox, web push (VAPID, a service worker in the site's web export), app push (Expo) and SMS through `ISmsProvider`. The preview uses the simulator adapter. The SMS provider is picked by the longest matching country prefix in `notifications.sms_routes`, edited in the console.
+- Templates are per event and channel, edited by staff, and fall back to the built-in wording. Customers choose channels per event, set a mobile number and quiet hours, and opt in to marketing per channel. Service messages are never blocked by marketing choices; marketing never goes out without opt-in.
+- Every push and SMS takes an id derived from the event, so a redelivered event sends nothing twice. The send log shows each delivery and its status (`notifications.deliveries.read`); templates and routes need `notifications.write` (identity 0018).
+
+**D173. Fraud signals are advisory cases; the only automatic action is a withdrawal hold on high severity.**
+- Clients send a SHA-256 hash of device signals at sign-in, registration, deposit and withdrawal; risk adds IP prefix, ASN, country and a short user agent. No raw device data is stored.
+- Rules: many accounts on one device, a bank account shared across customers (payments sends a keyed HMAC, never the number), deposit then withdraw with little betting, impossible travel, disposable email domains.
+- One open case per customer and rule. While a high-severity case is open, payments refuses withdrawals as under review (`Fraud:HoldWithdrawalsOnHigh`, default on); if risk is unreachable withdrawals proceed. Staff see cases with linked accounts (`fraud.read`) and resolve with a reason (`fraud.write`, identity 0019), audited.
