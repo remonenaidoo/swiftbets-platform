@@ -59,8 +59,8 @@ The order is strict: a fully working core platform first, then expansion. Each i
 
 | # | Item | Status |
 |---|---|---|
-| 34 | Horse racing: racecards, results, fixed odds | ☑ D175 |
-| 35 | Tote pools: win, place, swinger, exacta, trifecta, quartet, double, jackpot, Pick 6, place accumulator; banker, boxed, floating banker; dividends | ☑ D175 |
+| 34 | Horse racing: racecards, results, fixed odds | ✅ D175 |
+| 35 | Tote pools: win, place, swinger, exacta, trifecta, quartet, double, jackpot, Pick 6, place accumulator; banker, boxed, floating banker; dividends | ✅ D175 |
 | 36 | Lucky Numbers and lotto draws | ☐ |
 | 37 | Live games (Betgames, TvBet) when contracted | ☐ |
 | 38 | Virtual sports when contracted | ☐ |
