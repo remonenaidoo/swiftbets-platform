@@ -18,7 +18,7 @@ provider "helm" {
 
 locals {
   install  = var.kubeconfig_path != ""
-  services = ["placement", "wallet", "settlement", "payout", "identity", "compliance", "payments", "casino"]
+  services = ["placement", "wallet", "settlement", "payout", "identity", "compliance", "payments", "casino", "racing"]
 }
 
 module "oci" {
@@ -44,7 +44,7 @@ resource "random_password" "db" {
 }
 
 resource "random_password" "client" {
-  for_each = toset(["payout", "steward", "demo", "payments", "payments-simulator", "payments-webhook", "placement", "cashout", "history", "casino", "casino-sim-seamless", "casino-sim-transfer", "notifications", "reporting"])
+  for_each = toset(["payout", "steward", "demo", "payments", "payments-simulator", "payments-webhook", "placement", "cashout", "history", "casino", "casino-sim-seamless", "casino-sim-transfer", "notifications", "reporting", "racing", "racing-tote"])
   length   = 32
   special  = false
 }
@@ -85,6 +85,8 @@ resource "kubernetes_secret_v1" "swiftbets" {
       "placement-client-secret"     = random_password.client["placement"].result
       "cashout-client-secret"       = random_password.client["cashout"].result
       "casino-client-secret"        = random_password.client["casino"].result
+      "racing-client-secret"        = random_password.client["racing"].result
+      "racing-tote-secret"          = random_password.client["racing-tote"].result
       "notifications-client-secret" = random_password.client["notifications"].result
       "reporting-client-secret"     = random_password.client["reporting"].result
       "casino-sim-seamless-secret"  = random_password.client["casino-sim-seamless"].result

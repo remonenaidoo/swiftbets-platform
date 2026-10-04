@@ -16,6 +16,7 @@ localSecrets:
     compliance: Local-Dev-Compliance-1
     payments: Local-Dev-Payments-1
     casino: Local-Dev-Casino-1
+    racing: Local-Dev-Racing-1
     casino-catalog: local-dev-casino-catalog
     risk: local-dev-risk
     warehouse: local-dev-warehouse
@@ -33,10 +34,12 @@ localSecrets:
     cashout: local-dev-cashout-client-secret
     history: local-dev-history-client-secret
     casino: local-dev-casino-client-secret
+    racing: local-dev-racing-client-secret
     notifications: local-dev-notifications-client-secret
     reporting: local-dev-reporting-client-secret
   casinoSimSeamlessSecret: local-dev-sim-seamless-secret-0123456789abcdef
   casinoSimTransferSecret: local-dev-sim-transfer-secret-0123456789abcdef
+  racingToteSecret: local-dev-racing-tote-secret-0123456789abcdef
   # Base64 of 32 bytes; signs cashout quotes. Local only - prod's comes from Terraform.
   cashoutSigningKey: bG9jYWwtZGV2LWNhc2hvdXQtcXVvdGUtc2lnbmluZy1r
   paymentsSimulatorApiKey: local-dev-simulator-key

@@ -1,0 +1,10 @@
+apiVersion: v2
+name: racing-sim
+description: The simulated tote operator - meetings on a compressed clock, pool sales, results and dividends, sent to racing as a signed feed.
+type: application
+version: 0.1.0
+appVersion: main
+dependencies:
+  - name: swiftbets-service
+    version: 0.1.0
+    repository: file://../swiftbets-service
